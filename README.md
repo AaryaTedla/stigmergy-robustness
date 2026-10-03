@@ -1,3 +1,9 @@
+## Starting a coding task
+
+For any task that creates, changes, tests, evaluates, or documents this capstone repository, start with:
+
+Read and follow AGENTS.md, docs/CONTEXT.md, and .agents/skills/capstone-implementation/SKILL.md before working.
+
 # Robust Stigmergic Coordination under Minority Pheromone Injection Attacks
 
 This repository is the documentation-first foundation for a capstone on cooperative learned policies that coordinate through a shared pheromone field. It records the agreed research scope before implementation begins.
