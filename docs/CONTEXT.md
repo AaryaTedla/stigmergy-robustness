@@ -76,10 +76,10 @@ These are agreed implementation requirements, not proof that code already exists
 
 ## Current verified repository state
 
-- This repository is documentation-only.
-- No environment, trained policy, attack injector, trajectory generator, detector, dataset, checkpoint, or benchmark result exists here.
+- A clean grid environment and scripted mechanics demo are implemented and verified; see the implementation entry below.
+- No trained policy, attack injector, trajectory generator, detector, dataset, checkpoint, or research benchmark result exists here.
 - The files in `docs/reference/` are finalized project documents copied into this repository as canonical references.
-- The README commands and dependency list are implementation contracts only; they are not runnable yet.
+- The README JSON-configured demo and test commands are runnable. Training and evaluation commands and their broader dependency stack remain planned.
 
 ## Project roadmap
 
@@ -93,6 +93,8 @@ These are agreed implementation requirements, not proof that code already exists
 Early gates: clean simulator by week 2; trained-policy/attack/logging evidence by week 4; local-defense pilot and comparisons by week 6; reproducible release by week 7.
 
 ## Team rotation
+
+For name-based first-review continuation, follow [the team milestone and handoff plan](FIRST_REVIEW_PLAN.md). It defines the Aarya → Shashannk → Rohan → Tusti sequence and user-controlled commit/merge checkpoints; its targets are planned work, not completed evidence.
 
 Initial owners: Aarya—environment and pheromone mechanics; Shashannk—policies and training; Rohan—attacks and trajectories; Tusti—local defense and evaluation.
 
@@ -116,7 +118,7 @@ When code exists, append concise entries under these headings instead of rewriti
 
 ### Implemented and verified
 
-No entries yet.
+2026-10-07 — Aarya's clean simulator milestone (`src/stigmergy/environment.py`, `src/stigmergy/cli.py`, `configs/env/*.json`, `tests/test_environment.py`). Decision 0001 specifies co-location, pickup contention, update order, observations, shared reward, bounds, and lifecycle. CPython 3.11.16 with pinned dependencies passed 27 pytest cases, including the PettingZoo parallel API test, deterministic 100-step replay, conservation, local observation isolation, and repeated demo artifact comparison. Editable package installation succeeded. Seed 7 scripted fixtures delivered eight units in 89 steps (8×8/two agents) and 55 steps (16×16/eight agents). Validation used working-tree changes on base revision `3c7cc20`; committed revision provenance must be captured in fresh runs after commit. Rule-based/scripted mechanics evidence only; no learned coordination, robustness, diffusion, or evaluation claim. Team review pending.
 
 ### Open risks and decisions
 

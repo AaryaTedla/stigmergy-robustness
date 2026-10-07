@@ -1,0 +1,12 @@
+# Validated on CPython 3.11.16. Install before `pip install -e . --no-deps`.
+# Includes runtime and test dependencies; no training stack is installed yet.
+cloudpickle==3.1.2
+farama-notifications==0.0.6
+gymnasium==1.0.0
+iniconfig==2.3.1
+numpy==2.3.5
+packaging==26.3
+pettingzoo==1.24.3
+pluggy==1.6.0
+pytest==8.3.5
+typing-extensions==4.16.0

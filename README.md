@@ -4,6 +4,8 @@ For any task that creates, changes, tests, evaluates, or documents this capstone
 
 Read and follow AGENTS.md, docs/CONTEXT.md, and .agents/skills/capstone-implementation/SKILL.md before working.
 
+To continue your first-review implementation, add your name (for example, “I am Rohan. Continue my first-review milestone.”). Agents must follow the [team milestone and handoff plan](docs/FIRST_REVIEW_PLAN.md) and verify current progress before acting.
+
 # Robust Stigmergic Coordination under Minority Pheromone Injection Attacks
 
 This repository is the documentation-first foundation for a capstone on cooperative learned policies that coordinate through a shared pheromone field. It records the agreed research scope before implementation begins.
@@ -12,7 +14,22 @@ The project asks whether a lightweight defense based only on an agent's local ph
 
 ## Current status
 
-No simulator, training pipeline, dataset generator, or defense implementation exists in this repository yet. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) is the working, agent-readable source of truth derived from them.
+Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. PPO training, attacks, datasets, and defenses remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
+
+## Run the first-review simulator
+
+Validated on Python 3.11.16. From the repository root:
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements-dev.lock
+python -m pip install -e . --no-deps
+python -m pytest -q
+python -m stigmergy.cli demo --config configs/env/development.json --seed 7 --output artifacts/review-demo
+```
+
+Use a fresh output directory for each run. Open `artifacts/review-demo/snapshot.svg` in a browser to inspect the final grid and both pheromone fields; `summary.json` records configuration, seed, source revision, dirty-tree status, and food accounting. Use `configs/env/pilot.json` for the 16×16/eight-agent fixture. The demo follows scripted routes on explicit food cells; it is mechanics evidence, not a learned-policy result. See [Aarya's walkthrough](docs/AARYA_FIRST_REVIEW.md).
 
 ## Research scope
 
@@ -28,7 +45,7 @@ Misleading pheromone, minority disruption, and cautionary-pheromone mitigation a
 
 The initial implementation target is Python 3.11. The expected dependency categories are NumPy, PettingZoo, SuperSuit, Stable-Baselines3, PyTorch, scikit-learn, pandas, PyArrow, PyYAML, matplotlib, and pytest. Exact versions must be selected, tested, and pinned when implementation starts.
 
-The following commands are planned interfaces only. They are not available until the corresponding code and tests exist.
+Only the JSON-configured `demo` command above is implemented. The broader training/dependency stack below remains planned; these interfaces are not available yet.
 
 ```bash
 python3.11 -m venv .venv
