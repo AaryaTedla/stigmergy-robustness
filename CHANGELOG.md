@@ -4,6 +4,10 @@ This file records verified project changes. Planned work belongs in `docs/CONTEX
 
 ## Unreleased
 
+### Coding guidance
+
+- Added repository-wide requirements in `AGENTS.md` for explanatory code-file headers, important function/class documentation, non-obvious reasoning comments, and synchronized explanations. Documentation-only change; verified with `git diff --check`.
+
 ### Added
 
 - Documentation-only repository bootstrap with agent instructions, canonical context, a decision-record template, and the finalized capstone documents.

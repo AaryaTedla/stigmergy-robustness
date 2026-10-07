@@ -25,3 +25,12 @@ Before changing code, experiments, or research claims, read `README.md`, `docs/C
 ## Completion standard
 
 Run relevant tests and reproducibility checks before describing an implementation change as complete. Report which checks passed, which did not run, and any limitations that affect conclusions.
+
+## Code explanations for the team
+
+- Every code file you create or substantially change must begin with a detailed explanation before the implementation. For Python, use a module docstring after any mandatory interpreter/encoding header and before imports.
+- Write for a teammate learning the project: explain the file's purpose, key concepts, inputs and outputs (including shapes, units, and conventions where relevant), execution flow, important assumptions, limitations, and how to run or use it. Scale detail to the file's complexity; small files need only the applicable points.
+- Document important classes and functions with their responsibilities, parameters, return values, and non-obvious behavior. Explain why significant algorithms, update ordering, formulas, and constraints are used in comments beside the relevant code. Avoid comments that merely repeat the syntax.
+- Distinguish scripted/debugging behavior from learned-policy behavior, and simulator-only metadata from model-observable inputs wherever applicable.
+- Keep explanations synchronized with implementation changes. Tests and scripts need explanations too. For formats that cannot contain comments, such as JSON, document their fields and usage in a linked Markdown guide rather than adding invalid comments.
+- Before handing off a milestone, check that a teammate can understand and run the code from these explanations and the README. Include these instruction changes in the commit so the next agent receives them.
