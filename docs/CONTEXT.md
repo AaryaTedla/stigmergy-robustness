@@ -94,6 +94,8 @@ Early gates: clean simulator by week 2; trained-policy/attack/logging evidence b
 
 ## Team rotation
 
+For name-based first-review continuation, follow [the team milestone and handoff plan](FIRST_REVIEW_PLAN.md). It defines the Aarya → Shashannk → Rohan → Tusti sequence and user-controlled commit/merge checkpoints; its targets are planned work, not completed evidence.
+
 Initial owners: Aarya—environment and pheromone mechanics; Shashannk—policies and training; Rohan—attacks and trajectories; Tusti—local defense and evaluation.
 
 Rotate in later phases so every teammate owns each subsystem, reviews another subsystem, reads anchor papers, runs experiments, and contributes to writing. Initial review cycle: Shashannk reviews Aarya, Rohan reviews Shashannk, Tusti reviews Rohan, and Aarya reviews Tusti.

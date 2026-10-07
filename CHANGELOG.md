@@ -6,6 +6,8 @@ This file records verified project changes. Planned work belongs in `docs/CONTEX
 
 ### Coding guidance
 
+- Added `docs/FIRST_REVIEW_PLAN.md` and links from agent instructions, context, and README so a startup instruction plus teammate name selects the corresponding milestone, checks dependencies, and stops at the user's commit/merge checkpoint. Documentation-only change; links and whitespace checked.
+
 - Added repository-wide requirements in `AGENTS.md` for explanatory code-file headers, important function/class documentation, non-obvious reasoning comments, and synchronized explanations. Documentation-only change; verified with `git diff --check`.
 
 ### Added

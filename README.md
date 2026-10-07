@@ -4,6 +4,8 @@ For any task that creates, changes, tests, evaluates, or documents this capstone
 
 Read and follow AGENTS.md, docs/CONTEXT.md, and .agents/skills/capstone-implementation/SKILL.md before working.
 
+To continue your first-review implementation, add your name (for example, “I am Rohan. Continue my first-review milestone.”). Agents must follow the [team milestone and handoff plan](docs/FIRST_REVIEW_PLAN.md) and verify current progress before acting.
+
 # Robust Stigmergic Coordination under Minority Pheromone Injection Attacks
 
 This repository is the documentation-first foundation for a capstone on cooperative learned policies that coordinate through a shared pheromone field. It records the agreed research scope before implementation begins.

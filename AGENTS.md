@@ -4,6 +4,10 @@
 
 Before changing code, experiments, or research claims, read `README.md`, `docs/CONTEXT.md`, the relevant files in `docs/decisions/`, and the repository-local skill at `.agents/skills/capstone-implementation/SKILL.md`.
 
+## Continue by teammate name
+
+When the user supplies the startup instruction and their teammate name, treat it as a request to continue that teammate's first-review milestone. Read `docs/FIRST_REVIEW_PLAN.md`, match the name to the owner, and inspect the actual repository, branch, and verified context before choosing work. Follow that plan's dependency and checkpoint rules. Do not merely repeat the plan or start another person's milestone automatically. A more specific user request takes precedence.
+
 ## Non-negotiable research boundaries
 
 - Keep the task as simulated grid-based cooperative resource retrieval. Do not claim hardware or real-world validation.
