@@ -4,6 +4,13 @@ This file records verified project changes. Planned work belongs in `docs/CONTEX
 
 ## Unreleased
 
+### Shashannk shared PPO review pipeline — 2026-10-08
+
+- Added a local-observation debugging controller, fixed-lifecycle PettingZoo-to-SB3 adapter, shared CPU PPO training, JSON smoke/development configs, lazy CLI commands, pinned training dependencies and teammate walkthrough (decision 0003).
+- Preserved the existing 58-value local observation, five actions and unmodified team delivery reward. Adapter checks cover simultaneous reset, terminal copies and horizon bootstrapping; no global critic, identity inputs or reward shaping was added.
+- Windows CPython 3.12.10 with SB3 2.7.1/torch 2.5.1+cpu passed 61 tests, editable install and dependency consistency checks. Two seed-7 smoke runs executed 4096 agent transitions (2048 world steps), changed finite parameters, passed reload and matched summaries/parameter hashes exactly. Development stochastic mean deliveries changed from 1.75 to 3.75; deterministic mean remained zero and no diagnostic episode completed.
+- Python 3.11 revalidation, the 300000-transition budget, curriculum progression, multiple training seeds, trail-reliance checks and research comparisons remain pending. The observed small development change does not establish useful learned coordination or robustness. SB3 2.4.1 was rejected by dependency resolution because it requires NumPy below 2; simulator pins were preserved.
+
 ### Rohan attack and trajectory foundation — 2026-10-08
 
 - Added one persistent false-food attack mode with seeded episode-fixed compromised agents, occupied-cell-only nonnegative deposits, global per-step and per-episode applied-mass budgets, common food-field cap/evaporation, and separate requested/authorized/applied mass accounting. The injector never changes actions, rewards, observations, or infos.

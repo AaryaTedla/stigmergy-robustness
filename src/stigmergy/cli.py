@@ -1,4 +1,4 @@
-"""Reproducible first-review demo using explicit scripted mechanics fixtures.
+"""CLI for mechanics fixtures, a local debug policy, and shared PPO training.
 
 Run `python -m stigmergy.cli demo --config configs/env/development.json`.
 The demo uses two known food cells on the right edge and sends alternating
@@ -14,6 +14,13 @@ It uses the same privileged scripted route as the visual fixture and is
 explicitly not a decentralized policy rollout or an evaluation result. Output
 directories must be fresh, preserving earlier runs. To check repeatability run
 twice with the same config/seed in separate directories: content should match.
+
+``debug-policy`` uses only each agent's current 58-value local observation and
+saves a seeded heuristic rollout summary. ``train`` lazily imports the optional
+CPU PPO stack, takes grid/policy JSON configs, and saves checkpoints, development
+diagnostics and provenance to a fresh output directory. These commands are
+distinct from the privileged scripted fixtures above. See training.py and the
+Shashannk walkthrough for transition units, seed partitions and limitations.
 """
 
 import argparse
@@ -24,6 +31,7 @@ import subprocess
 
 from .attacks import AttackConfig
 from .environment import GridConfig, ResourceRetrievalEnv
+from .policies import LocalDebugPolicy
 from .trajectories import matched_attack_configs, record_episode
 
 
@@ -117,8 +125,28 @@ def run_recorded_fixture(config_path, attack_config_path, scenario, seed, output
                           reset_options={"food_positions": patches})
 
 
+def run_debug_policy(config_path, seed, output):
+    """Roll out independently seeded local heuristic controllers; save diagnostics."""
+    config = GridConfig(**json.loads(Path(config_path).read_text()))
+    output = Path(output)
+    output.mkdir(parents=True, exist_ok=False)
+    world = ResourceRetrievalEnv(config)
+    observations, _ = world.reset(seed=seed)
+    controllers = {a: LocalDebugPolicy(seed=seed + i) for i, a in enumerate(world.agents)}
+    while world.agents:
+        actions = {a: controllers[a].act(observations[a]) for a in world.agents}
+        observations, _, _, _, _ = world.step(actions)
+    from .trajectories import _git_provenance
+    summary = {"label": "local rule-based debugging controller; not PPO evidence",
+               "seed": seed, "config": asdict(config), "provenance": _git_provenance(),
+               "steps": world.steps, "delivered": world.delivered_total}
+    (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    world.close()
+    return summary
+
+
 def main():
-    """Expose only implemented commands; future training interfaces remain absent."""
+    """Expose scripted fixtures, the local debugging controller and clean PPO."""
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     demo = commands.add_parser("demo", help="scripted simulator mechanics fixture")
@@ -132,12 +160,25 @@ def main():
                         default="attacked")
     record.add_argument("--seed", type=int, default=7)
     record.add_argument("--output", default="artifacts/rohan-fixture")
+    debug = commands.add_parser("debug-policy", help="local rule-based policy diagnostic")
+    debug.add_argument("--config", default="configs/env/development.json")
+    debug.add_argument("--seed", type=int, default=7)
+    debug.add_argument("--output", required=True)
+    train = commands.add_parser("train", help="clean parameter-shared PPO development pilot")
+    train.add_argument("--config", default="configs/env/development.json")
+    train.add_argument("--policy-config", default="configs/policy/review-smoke.json")
+    train.add_argument("--output", required=True)
     args = parser.parse_args()
     if args.command == "demo":
         run_demo(args.config, args.seed, args.output)
-    else:
+    elif args.command == "record-fixture":
         summary = run_recorded_fixture(args.config, args.attack_config, args.scenario, args.seed, args.output)
         print(json.dumps(summary, indent=2))
+    elif args.command == "debug-policy":
+        print(json.dumps(run_debug_policy(args.config, args.seed, args.output), indent=2))
+    else:
+        from .training import run_training
+        print(json.dumps(run_training(args.config, args.policy_config, args.output), indent=2))
 
 
 if __name__ == "__main__":

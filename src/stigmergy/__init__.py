@@ -2,8 +2,11 @@
 
 The public environment and validated configuration live in environment.py.
 Run `python -m stigmergy.cli demo` for a scripted mechanics demonstration.
-This package includes a bounded persistent attack/provenance pilot but no
-learned policy, attack evaluation, or trained defense result.
+The package also includes a bounded persistent attack/provenance pilot.
+Optional shared PPO training lives in training.py; its PyTorch/SB3 imports
+are kept out of this initializer so simulator-only installations still work.
+Short-run checkpoint evidence does not establish attack evaluation or a
+trained defense result.
 """
 
 from .attacks import AttackConfig, PersistentFalseFoodInjector

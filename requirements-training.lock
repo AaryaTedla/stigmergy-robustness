@@ -1,0 +1,27 @@
+# CPU review stack verified on Windows CPython 3.12. Python 3.11 recheck pending.
+# Full dependency pins including the existing simulator/test lock.
+# torch +cpu wheels require this additional official index (Windows/Linux).
+--extra-index-url https://download.pytorch.org/whl/cpu
+-r requirements-dev.lock
+torch==2.5.1+cpu
+stable-baselines3==2.7.1
+colorama==0.4.6
+contourpy==1.4.0
+cycler==0.12.1
+filelock==3.32.3
+fonttools==4.66.1
+fsspec==2026.7.0
+Jinja2==3.1.6
+kiwisolver==1.5.1
+MarkupSafe==3.0.3
+matplotlib==3.11.2
+mpmath==1.3.0
+networkx==3.6.1
+pandas==3.0.6
+pillow==12.3.0
+pyparsing==3.3.3
+python-dateutil==2.9.0.post0
+setuptools==78.1.0
+six==1.17.0
+sympy==1.13.1
+tzdata==2026.5
