@@ -14,7 +14,7 @@ The project asks whether a lightweight defense based only on an agent's local ph
 
 ## Current status
 
-Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Shashannk's clean shared-PPO pipeline and local debugging controller now run with reproducible short development diagnostics; useful learning and pheromone reliance remain unverified. Rohan's attack/provenance foundation adds one bounded persistent false-food injector and paired fixture controls. Tusti's local-defense foundation includes local history features and a timeout baseline; it is not yet integrated into PPO or attack evaluation. Decoy/intermittent attacks, split trajectory datasets, and research comparisons remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
+Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Shashannk's clean shared-PPO pipeline and local debugging controller now run with reproducible short development diagnostics; useful learning and pheromone reliance remain unverified. Rohan's attack/provenance foundation adds one bounded persistent false-food injector and paired fixture controls. Tusti's local history and timeout baseline are now integrated with matched PPO/attack development comparisons and plots; see [Tusti's walkthrough](docs/TUSTI_FIRST_REVIEW.md) for usage and the negative timeout result. Decoy/intermittent attacks, split trajectory datasets, and research comparisons remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
 
 ## Shared PPO review pipeline
 
@@ -31,7 +31,7 @@ Each output directory must be new. All agents use the same PPO actor/local value
 
 `LocalHistoryFeatures` converts one agent's observation and its own preceding action into 12 named, bounded history features. Construct one instance per agent, call `reset()` at each episode, and call `update(observation, previous_action)` for each new observation; use `None` for the initial observation. `LocalTimeoutDefense` wraps an already selected action and, after a configurable number of steps without pickup or delivery, uses only visible food/nest landmarks and the local boundary mask to redirect movement. Both are simulator-only rule-based components; they are not a detector, learned policy, or evidence of attack robustness.
 
-After installing the pinned development dependencies below, run their focused unit checks with `python -m pytest -q tests/test_defense.py`. Full defense comparisons still require PPO rollout integration and evaluation work.
+After installing the pinned development dependencies below, run their focused unit checks with `python -m pytest -q tests/test_defense.py`. First-review integration passed 73 tests and two reproducible 48-episode comparisons on Windows Python 3.12.10. Full research baselines and held-out evaluation remain pending. See [Tusti's walkthrough](docs/TUSTI_FIRST_REVIEW.md) for the `compare-development` command.
 
 ## Attack and trajectory foundation
 
@@ -68,7 +68,7 @@ Misleading pheromone, minority disruption, and cautionary-pheromone mitigation a
 
 The initial implementation target is Python 3.11. The expected dependency categories are NumPy, PettingZoo, SuperSuit, Stable-Baselines3, PyTorch, scikit-learn, pandas, PyArrow, PyYAML, matplotlib, and pytest. Exact versions must be selected, tested, and pinned when implementation starts.
 
-The JSON-configured `demo`, `record-fixture`, `debug-policy` and `train` commands are implemented. The YAML-configured interfaces below describe future plans; use the JSON PPO commands above for the current pipeline.
+The JSON-configured `demo`, `record-fixture`, `debug-policy`, `train` and `compare-development` commands are implemented. The YAML-configured interfaces below describe future plans; use the JSON PPO commands above for the current pipeline.
 
 ```bash
 python3.11 -m venv .venv
