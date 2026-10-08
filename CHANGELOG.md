@@ -4,6 +4,13 @@ This file records verified project changes. Planned work belongs in `docs/CONTEX
 
 ## Unreleased
 
+### Tusti development defense integration - 2026-10-08
+
+- Added frozen shared-PPO evaluation with local history/timeout, six matched development scenarios, separated local/simulator logs, honest accounting, paired metrics and PNG/SVG plots; documented in decision 0004 and Tusti's walkthrough.
+- Windows Python 3.12.10 passed 73 tests. Two 48-episode runs matched 104 reproducible files excluding timings. Checkpoint integrity, local control equality, bounded injection and failure preservation passed.
+- Preserved negative results: stochastic team deliveries fell from 3.75 to zero with timeout; honest timeout gain was -2, injection loss was zero and all recovery ratios were undefined. Deterministic deliveries remained zero. Attacked episodes applied 20 units and changed local trajectories.
+- N=2/k=1 is 50%, with one short training seed and development maps only. Python 3.11, pheromone reliance, minority pilot, full required baselines, detector and held-out evaluation remain pending. No robustness claim follows.
+
 ### Shashannk shared PPO review pipeline — 2026-10-08
 
 - Added a local-observation debugging controller, fixed-lifecycle PettingZoo-to-SB3 adapter, shared CPU PPO training, JSON smoke/development configs, lazy CLI commands, pinned training dependencies and teammate walkthrough (decision 0003).

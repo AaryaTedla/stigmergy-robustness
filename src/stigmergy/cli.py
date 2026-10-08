@@ -1,4 +1,4 @@
-"""CLI for mechanics fixtures, a local debug policy, and shared PPO training.
+"""CLI for fixtures, local debugging, shared PPO and development comparisons.
 
 Run `python -m stigmergy.cli demo --config configs/env/development.json`.
 The demo uses two known food cells on the right edge and sends alternating
@@ -21,6 +21,9 @@ CPU PPO stack, takes grid/policy JSON configs, and saves checkpoints, developmen
 diagnostics and provenance to a fresh output directory. These commands are
 distinct from the privileged scripted fixtures above. See training.py and the
 Shashannk walkthrough for transition units, seed partitions and limitations.
+``compare-development`` adds six matched clean/control/attack/timeout variants,
+local-history logs and static plots using a completed frozen PPO checkpoint.
+It accepts only declared development maps, and is not final held-out evaluation.
 """
 
 import argparse
@@ -168,6 +171,11 @@ def main():
     train.add_argument("--config", default="configs/env/development.json")
     train.add_argument("--policy-config", default="configs/policy/review-smoke.json")
     train.add_argument("--output", required=True)
+    compare = commands.add_parser("compare-development", help="matched development PPO/timeout comparisons")
+    compare.add_argument("--checkpoint", required=True)
+    compare.add_argument("--attack-config", default="configs/attack/persistent-review.json")
+    compare.add_argument("--comparison-config", default="configs/evaluation/review-development.json")
+    compare.add_argument("--output", required=True)
     args = parser.parse_args()
     if args.command == "demo":
         run_demo(args.config, args.seed, args.output)
@@ -176,9 +184,13 @@ def main():
         print(json.dumps(summary, indent=2))
     elif args.command == "debug-policy":
         print(json.dumps(run_debug_policy(args.config, args.seed, args.output), indent=2))
-    else:
+    elif args.command == "train":
         from .training import run_training
         print(json.dumps(run_training(args.config, args.policy_config, args.output), indent=2))
+    else:
+        from .evaluation import run_development_comparison
+        print(json.dumps(run_development_comparison(args.checkpoint, args.attack_config,
+                                                   args.comparison_config, args.output), indent=2))
 
 
 if __name__ == "__main__":

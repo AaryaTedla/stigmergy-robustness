@@ -1,0 +1,8 @@
+{
+  "purpose": "development_only",
+  "map_seeds": [100, 101, 102, 103],
+  "action_seeds": [7],
+  "action_modes": ["deterministic", "stochastic"],
+  "timeout": 8,
+  "progress_horizon": 20
+}

@@ -77,12 +77,12 @@ These are agreed implementation requirements, not proof that code already exists
 ## Current verified repository state
 
 - A clean grid environment and scripted mechanics demo are implemented and verified; see the implementation entry below.
-- A first local-defense foundation exists in `src/stigmergy/defense.py`: agent-local temporal features and a deterministic timeout baseline. Eight focused checks initially passed via an isolated Python 3.12 import. Those checks now also pass through the installed package in Shashannk's 61-test full-stack suite, including initial-observation timing. This is a component checkpoint, not attack evaluation or a completed Tusti milestone; defense integration/comparisons remain pending.
-- A first attack/provenance foundation exists in `src/stigmergy/attacks.py` and `src/stigmergy/trajectories.py`: one persistent bounded nonnegative false-food injector, seeded episode-fixed attacker selection, per-step/episode accounting, injection-disabled twins, and JSONL local-observation trajectory records with separate simulator-only labels. CPython 3.14.4 with the locked dependencies passed all 46 tests; seed-7 scripted clean, disabled, and attacked fixtures each delivered eight units in 89 steps, and clean/disabled policy-visible records matched. These are mechanics/accounting checks only; CPython 3.11 revalidation, PPO rollouts, attack effectiveness, data splits, and research comparisons remain unverified.
+- A first local-defense foundation exists in `src/stigmergy/defense.py`: agent-local temporal features and a deterministic timeout baseline. Eight focused checks initially passed via an isolated Python 3.12 import. Those checks now also pass through the installed package in Shashannk's 61-test full-stack suite, including initial-observation timing. This component checkpoint was subsequently integrated into the development comparison pipeline recorded below; robustness remains unverified.
+- A first attack/provenance foundation exists in `src/stigmergy/attacks.py` and `src/stigmergy/trajectories.py`: one persistent bounded nonnegative false-food injector, seeded episode-fixed attacker selection, per-step/episode accounting, injection-disabled twins, and JSONL local-observation trajectory records with separate simulator-only labels. CPython 3.14.4 with the locked dependencies passed all 46 tests; seed-7 scripted clean, disabled, and attacked fixtures each delivered eight units in 89 steps, and clean/disabled policy-visible records matched. These are mechanics/accounting checks only; PPO development rollouts were subsequently integrated below. CPython 3.11 revalidation, attack effectiveness, data splits and the full research comparisons remain unverified.
 - A clean parameter-shared PPO pipeline and local-observation debugging controller are implemented. Windows CPython 3.12.10 with the pinned CPU training stack passed 61 tests, editable installation and dependency checks. Two 4096-transition seed-7 development runs matched summaries/parameter hashes and passed checkpoint reload. Deterministic mean deliveries remained zero; seeded stochastic mean deliveries changed from 1.75 to 3.75 on four development maps. This verifies pipeline execution, not useful learning, pheromone reliance or robustness. Python 3.11 revalidation and longer/multiple-seed training remain pending; see the implementation entry and Shashannk walkthrough.
 - Short-run initial/final checkpoints exist only in ignored local artifacts. No detector, split trajectory dataset or research benchmark result exists. Persistent attack mode is the sole implemented mode; decoy and intermittent modes remain future work.
 - The files in `docs/reference/` are finalized project documents copied into this repository as canonical references.
-- The JSON demo, fixture recorder, local debug policy and clean PPO train commands are runnable with their documented dependencies. Evaluation/dataset commands beyond development diagnostics remain planned.
+- The JSON demo, fixture recorder, local debug policy and clean PPO train and development comparison commands are runnable with their documented dependencies. Evaluation/dataset commands beyond development diagnostics remain planned.
 
 ## Project roadmap
 
@@ -135,10 +135,26 @@ roundtrip; deterministic delivery remained zero. Full learning, Python 3.11
 validation and research comparisons are still open. See
 `docs/SHASHANNK_FIRST_REVIEW.md` for usage, per-map outcomes and limitations.
 
+Tusti review integration, 2026-10-08: `evaluation.py`, `evaluation_plots.py`,
+comparison config and CLI connect frozen shared PPO to local history/timeout
+and six paired development scenarios (decision 0004). Windows Python 3.12.10
+passed 73 tests. Two 48-episode runs on maps 100-103/action seed 7 matched 104
+reproducible files excluding runtime. Checkpoint bytes were unchanged and
+clean/disabled local records matched. Attacked episodes applied 20 units each
+and changed local trajectories. Deterministic deliveries were zero throughout.
+Stochastic clean/disabled/attacked team means were 3.75; every timeout variant
+produced zero. Honest injection loss was zero, timeout gain was -2, and all
+recovery ratios were undefined. Preserve these negative/zero results. N=2/k=1
+(50%), one short training seed, no completed episodes and unverified pheromone
+reliance prevent minority/robustness conclusions. Python 3.11, full baseline/
+detector work and held-out evaluation remain pending. See
+[Tusti's walkthrough](TUSTI_FIRST_REVIEW.md). Team review pending; verified on
+working-tree changes based on `cf260b6`.
+
 ### Open risks and decisions
 
 - Revalidate the pinned shared PPO training stack on the declared Python 3.11 target and audit the narrow adapter when expanding the simulator's fixed lifecycle.
 - Confirm learned policies use the pheromone channels before evaluating attacks against them.
-- Integrate local history/timeout behavior and learned PPO rollouts with reproducible clean, injection-disabled, attacked and defended comparisons on development conditions; existing fixtures do not establish robustness.
+- Investigate the negative timeout development result and confirm pheromone reliance before the full required baseline study; development comparisons do not establish robustness.
 - Freeze the final test manifest before held-out evaluation and retain clean/control/attack pairings.
 - Recheck the qualified dataset finding and literature coverage before manuscript submission.
