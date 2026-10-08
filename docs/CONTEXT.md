@@ -77,11 +77,12 @@ These are agreed implementation requirements, not proof that code already exists
 ## Current verified repository state
 
 - A clean grid environment and scripted mechanics demo are implemented and verified; see the implementation entry below.
-- A first local-defense foundation exists in `src/stigmergy/defense.py`: agent-local temporal features and a deterministic timeout baseline. Eight focused unit checks passed on Python 3.12, including a check that the initial observation does not count as elapsed stagnation time. The checks loaded this module without the environment package initializer because the pinned Gymnasium/PettingZoo dependencies are not installed in the current interpreter; full repository integration checks remain unrun. This is a component checkpoint, not attack evaluation or a completed Tusti milestone.
+- A first local-defense foundation exists in `src/stigmergy/defense.py`: agent-local temporal features and a deterministic timeout baseline. Eight focused checks initially passed via an isolated Python 3.12 import. Those checks now also pass through the installed package in Shashannk's 61-test full-stack suite, including initial-observation timing. This is a component checkpoint, not attack evaluation or a completed Tusti milestone; defense integration/comparisons remain pending.
 - A first attack/provenance foundation exists in `src/stigmergy/attacks.py` and `src/stigmergy/trajectories.py`: one persistent bounded nonnegative false-food injector, seeded episode-fixed attacker selection, per-step/episode accounting, injection-disabled twins, and JSONL local-observation trajectory records with separate simulator-only labels. CPython 3.14.4 with the locked dependencies passed all 46 tests; seed-7 scripted clean, disabled, and attacked fixtures each delivered eight units in 89 steps, and clean/disabled policy-visible records matched. These are mechanics/accounting checks only; CPython 3.11 revalidation, PPO rollouts, attack effectiveness, data splits, and research comparisons remain unverified.
-- No trained policy, detector, split trajectory dataset, checkpoint, or research benchmark result exists here. Persistent attack mode is the sole implemented mode; decoy and intermittent modes remain future work.
+- A clean parameter-shared PPO pipeline and local-observation debugging controller are implemented. Windows CPython 3.12.10 with the pinned CPU training stack passed 61 tests, editable installation and dependency checks. Two 4096-transition seed-7 development runs matched summaries/parameter hashes and passed checkpoint reload. Deterministic mean deliveries remained zero; seeded stochastic mean deliveries changed from 1.75 to 3.75 on four development maps. This verifies pipeline execution, not useful learning, pheromone reliance or robustness. Python 3.11 revalidation and longer/multiple-seed training remain pending; see the implementation entry and Shashannk walkthrough.
+- Short-run initial/final checkpoints exist only in ignored local artifacts. No detector, split trajectory dataset or research benchmark result exists. Persistent attack mode is the sole implemented mode; decoy and intermittent modes remain future work.
 - The files in `docs/reference/` are finalized project documents copied into this repository as canonical references.
-- The README JSON-configured demo and test commands are runnable. Training and evaluation commands and their broader dependency stack remain planned.
+- The JSON demo, fixture recorder, local debug policy and clean PPO train commands are runnable with their documented dependencies. Evaluation/dataset commands beyond development diagnostics remain planned.
 
 ## Project roadmap
 
@@ -124,10 +125,20 @@ When code exists, append concise entries under these headings instead of rewriti
 
 2026-10-08 — Rohan's persistent false-food attack/provenance milestone (`src/stigmergy/attacks.py`, `src/stigmergy/trajectories.py`, `configs/attack/persistent-review.json`, `tests/test_attacks.py`). Decision 0002 specifies fixed seeded attacker selection, occupied-cell nonnegative food deposits after legal movement/pickup-delivery, shared field cap/evaporation, global per-step/episode applied-mass budgets, and clean/injection-disabled/attacked controls. CPython 3.14.4 with locked dependencies passed 46 pytest cases. Seed-7 scripted development fixtures produced 89 steps and eight deliveries in every scenario; injection-disabled and clean policy-visible records matched, while the attacked run selected `agent_1`, requested 89 units, and authorized/applied the 20-unit episode budget. These fixtures and logs verify implementation accounting, not attack degradation or learned-policy coordination. The declared Python 3.11 target was unavailable and requires a fresh recheck; PPO, decoy/intermittent modes, grouped data splits, and evaluation remain incomplete. Team review pending.
 
+Shashannk review checkpoint, 2026-10-08: `policies.py`, `ppo_adapter.py`,
+`training.py`, policy JSON configs and CLI commands were verified with the
+61-test installed-package suite on Windows Python 3.12.10. Decision 0003 and
+`requirements-training.lock` document the unchanged local inputs/team reward,
+custom synchronous adapter and explicit development maps. Two seed-7 smoke
+runs of 4096 transitions matched summaries/parameters and passed checkpoint
+roundtrip; deterministic delivery remained zero. Full learning, Python 3.11
+validation and research comparisons are still open. See
+`docs/SHASHANNK_FIRST_REVIEW.md` for usage, per-map outcomes and limitations.
+
 ### Open risks and decisions
 
-- Establish a functioning PPO/PettingZoo/SuperSuit adapter and pin validated versions before treating the planned commands as runnable.
+- Revalidate the pinned shared PPO training stack on the declared Python 3.11 target and audit the narrow adapter when expanding the simulator's fixed lifecycle.
 - Confirm learned policies use the pheromone channels before evaluating attacks against them.
-- Install and validate the pinned Python 3.11 environment, then run the full suite and integrate local history/timeout behavior with reproducible clean, injection-disabled, attacked, and defended comparisons once the PPO and attack/trajectory prerequisites are available.
+- Integrate local history/timeout behavior and learned PPO rollouts with reproducible clean, injection-disabled, attacked and defended comparisons on development conditions; existing fixtures do not establish robustness.
 - Freeze the final test manifest before held-out evaluation and retain clean/control/attack pairings.
 - Recheck the qualified dataset finding and literature coverage before manuscript submission.

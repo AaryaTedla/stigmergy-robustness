@@ -14,13 +14,24 @@ The project asks whether a lightweight defense based only on an agent's local ph
 
 ## Current status
 
-Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Rohan's first-review attack/provenance foundation adds one bounded persistent false-food injector, paired clean/injection-disabled/attacked fixture controls, and JSONL trajectory accounting; it is not learned-policy evidence. Tusti's local-defense foundation includes temporal local-history features and a timeout baseline in `src/stigmergy/defense.py`; it is not yet integrated into a learned policy or attack evaluation. PPO training, decoy/intermittent attacks, split trajectory datasets, and comparative results remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
+Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Shashannk's clean shared-PPO pipeline and local debugging controller now run with reproducible short development diagnostics; useful learning and pheromone reliance remain unverified. Rohan's attack/provenance foundation adds one bounded persistent false-food injector and paired fixture controls. Tusti's local-defense foundation includes local history features and a timeout baseline; it is not yet integrated into PPO or attack evaluation. Decoy/intermittent attacks, split trajectory datasets, and research comparisons remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
+
+## Shared PPO review pipeline
+
+See [Shashannk's walkthrough](docs/SHASHANNK_FIRST_REVIEW.md) for the code reading order, Windows setup, config fields and measured results. Install `requirements-training.lock` for the optional CPU training stack and install the package editable. Then run:
+
+```powershell
+.\.venv\Scripts\python.exe -m stigmergy.cli debug-policy --output artifacts/local-debug-new
+.\.venv\Scripts\python.exe -m stigmergy.cli train --policy-config configs/policy/review-smoke.json --output artifacts/ppo-smoke-new
+```
+
+Each output directory must be new. All agents use the same PPO actor/local value network on the existing local observation. The smoke budget is 4096 agent transitions; `configs/policy/development.json` provides the planned 300000-transition budget. The pinned training stack was verified on Windows Python 3.12.10; the declared Python 3.11 target still requires a recheck. Full-stack checks passed 61 tests. Two smoke runs matched exactly; deterministic diagnostic deliveries remained zero. A short run is pipeline evidence and does not establish useful coordination or robustness.
 
 ## Local-defense foundation
 
 `LocalHistoryFeatures` converts one agent's observation and its own preceding action into 12 named, bounded history features. Construct one instance per agent, call `reset()` at each episode, and call `update(observation, previous_action)` for each new observation; use `None` for the initial observation. `LocalTimeoutDefense` wraps an already selected action and, after a configurable number of steps without pickup or delivery, uses only visible food/nest landmarks and the local boundary mask to redirect movement. Both are simulator-only rule-based components; they are not a detector, learned policy, or evidence of attack robustness.
 
-After installing the pinned development dependencies below, run their focused unit checks with `python -m pytest -q tests/test_defense.py`. The full first-review comparisons still require the shared PPO and attack/trajectory milestones.
+After installing the pinned development dependencies below, run their focused unit checks with `python -m pytest -q tests/test_defense.py`. Full defense comparisons still require PPO rollout integration and evaluation work.
 
 ## Attack and trajectory foundation
 
@@ -57,7 +68,7 @@ Misleading pheromone, minority disruption, and cautionary-pheromone mitigation a
 
 The initial implementation target is Python 3.11. The expected dependency categories are NumPy, PettingZoo, SuperSuit, Stable-Baselines3, PyTorch, scikit-learn, pandas, PyArrow, PyYAML, matplotlib, and pytest. Exact versions must be selected, tested, and pinned when implementation starts.
 
-Only the JSON-configured `demo` command above is implemented. The broader training/dependency stack below remains planned; these interfaces are not available yet.
+The JSON-configured `demo`, `record-fixture`, `debug-policy` and `train` commands are implemented. The YAML-configured interfaces below describe future plans; use the JSON PPO commands above for the current pipeline.
 
 ```bash
 python3.11 -m venv .venv
