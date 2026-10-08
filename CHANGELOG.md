@@ -4,6 +4,13 @@ This file records verified project changes. Planned work belongs in `docs/CONTEX
 
 ## Unreleased
 
+### Rohan attack and trajectory foundation — 2026-10-08
+
+- Added one persistent false-food attack mode with seeded episode-fixed compromised agents, occupied-cell-only nonnegative deposits, global per-step and per-episode applied-mass budgets, common food-field cap/evaporation, and separate requested/authorized/applied mass accounting. The injector never changes actions, rewards, observations, or infos.
+- Added paired clean, injection-disabled, and attacked scenario configuration, JSONL trajectory recording, and a scripted review fixture command. Attack IDs/events stay under simulator-only metadata; only local observations and normal environment transition data appear in the policy-visible record.
+- Added decision 0002, a review walkthrough, a review attack config, and focused checks. With locked dependencies on CPython 3.14.4, all 46 tests passed. Seed-7 clean, disabled, and attacked scripted fixtures each delivered eight units in 89 steps; clean and disabled policy-visible records matched, while the attack applied its configured 20-unit episode budget.
+- This is mechanics/provenance evidence only. The repository target is CPython 3.11 and still needs a fresh run there. There is no PPO-generated trajectory, learned-policy attack result, detector comparison, data split, or decoy/intermittent implementation.
+
 ### Tusti local-defense foundation — 2026-10-08
 
 - Added `src/stigmergy/defense.py` with 12 agent-local temporal features derived from the documented observation and own action/progress history, plus a deterministic patience/timeout baseline using local food/nest/boundary cues.
