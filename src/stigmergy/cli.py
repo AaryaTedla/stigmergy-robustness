@@ -8,10 +8,12 @@ policy nor a baseline and makes no learning or coordination claim.
 
 Outputs: a terminal grid, summary.json (configuration, seed, source revision,
 food accounting, and fixture label), and snapshot.svg with the final grid and
-two pheromone heatmaps. Output directories must be fresh, preserving earlier
-runs. To check repeatability run twice with the same config/seed in separate
-directories: summary and SVG content should match. These are development
-demonstration artifacts, not held-out evaluation data or attack trajectories.
+two pheromone heatmaps. The ``record-fixture`` command additionally saves one
+clean, injection-disabled, or attacked trajectory with mass/provenance logs.
+It uses the same privileged scripted route as the visual fixture and is
+explicitly not a decentralized policy rollout or an evaluation result. Output
+directories must be fresh, preserving earlier runs. To check repeatability run
+twice with the same config/seed in separate directories: content should match.
 """
 
 import argparse
@@ -20,7 +22,9 @@ import json
 from pathlib import Path
 import subprocess
 
+from .attacks import AttackConfig
 from .environment import GridConfig, ResourceRetrievalEnv
+from .trajectories import matched_attack_configs, record_episode
 
 
 def snapshot_svg(env):
@@ -83,6 +87,36 @@ def run_demo(config_path, seed, output):
     return summary
 
 
+def run_recorded_fixture(config_path, attack_config_path, scenario, seed, output):
+    """Save one labelled scripted control/attack trajectory for audit only.
+
+    The action provider reads simulator positions to reproduce the established
+    visual fixture.  That privilege makes it unsuitable as a policy baseline,
+    but useful for checking attack placement, control matching, and recorder
+    provenance before a PPO policy exists.
+    """
+    config = GridConfig(**json.loads(Path(config_path).read_text()))
+    base_attack = AttackConfig(**json.loads(Path(attack_config_path).read_text()))
+    scenarios = matched_attack_configs(base_attack)
+    if scenario not in scenarios:
+        raise ValueError(f"scenario must be one of {', '.join(scenarios)}")
+    environment = ResourceRetrievalEnv(config, attack_config=scenarios[scenario])
+    patches = [(1, config.size - 1), (config.size - 2, config.size - 1)]
+
+    def scripted_actions(_observations):
+        """Follow known fixture coordinates; never treat this as a policy."""
+        actions = {}
+        for index, agent in enumerate(environment.agents):
+            target = (1, 1) if environment.carrying[index] else patches[index % 2]
+            row, column = environment.positions[index]
+            actions[agent] = (3 if row < target[0] else 1 if row > target[0] else
+                              2 if column < target[1] else 4 if column > target[1] else 0)
+        return actions
+
+    return record_episode(environment, seed, scenario, scripted_actions, output,
+                          reset_options={"food_positions": patches})
+
+
 def main():
     """Expose only implemented commands; future training interfaces remain absent."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -91,8 +125,19 @@ def main():
     demo.add_argument("--config", default="configs/env/development.json")
     demo.add_argument("--seed", type=int, default=7)
     demo.add_argument("--output", default="artifacts/aarya-demo")
+    record = commands.add_parser("record-fixture", help="record a scripted attack/control fixture")
+    record.add_argument("--config", default="configs/env/development.json")
+    record.add_argument("--attack-config", default="configs/attack/persistent-review.json")
+    record.add_argument("--scenario", choices=("clean", "injection_disabled", "attacked"),
+                        default="attacked")
+    record.add_argument("--seed", type=int, default=7)
+    record.add_argument("--output", default="artifacts/rohan-fixture")
     args = parser.parse_args()
-    run_demo(args.config, args.seed, args.output)
+    if args.command == "demo":
+        run_demo(args.config, args.seed, args.output)
+    else:
+        summary = run_recorded_fixture(args.config, args.attack_config, args.scenario, args.seed, args.output)
+        print(json.dumps(summary, indent=2))
 
 
 if __name__ == "__main__":

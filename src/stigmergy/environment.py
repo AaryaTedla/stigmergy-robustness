@@ -12,7 +12,10 @@ parallel contract: observations, rewards, terminations, truncations, infos.
 
 Step order: validate the entire action batch; move (off-grid moves stay put);
 deliver/pick up in seeded contention order; deposit according to carrying
-state; cap fields; evaporate; emit observations and own progress events.
+state; optionally inject bounded false-food mass at selected attackers' actual
+post-movement cells; cap fields; evaporate; emit observations and own progress
+events.  Attack selection and mass accounting are simulator-only provenance,
+never an observation or info field.
 Co-location and swaps are allowed. Team reward counts deliveries. Completion
 terminates; reaching the horizon otherwise truncates. Food is conserved among
 resource cells, carried units, and deliveries.
@@ -27,8 +30,9 @@ future policy and defense code must use observations, not these arrays.
 
 Fields have shape (2, size, size): food channel 0, home channel 1. Deposits
 occur at actual post-movement positions, are nonnegative, and share the cap
-and evaporation rule. Diffusion, attacks, and defenses are intentionally
-future milestones. See decision 0001 for semantics and limitations.
+and evaporation rule. The optional first-review persistent attack uses the
+same food-field cap and transport stage; see decision 0002 for its narrow
+threat model. Diffusion and learned defenses remain future milestones.
 """
 
 from dataclasses import dataclass
@@ -36,6 +40,8 @@ from dataclasses import dataclass
 import numpy as np
 from gymnasium import spaces
 from pettingzoo import ParallelEnv
+
+from .attacks import AttackConfig, PersistentFalseFoodInjector
 
 
 @dataclass(frozen=True)
@@ -73,7 +79,13 @@ class ResourceRetrievalEnv(ParallelEnv):
     metadata = {"name": "resource_retrieval_v0", "render_modes": ["ansi"], "is_parallelizable": True}
     MOVES = np.array([(0, 0), (-1, 0), (0, 1), (1, 0), (0, -1)])
 
-    def __init__(self, config=None, render_mode=None):
+    def __init__(self, config=None, render_mode=None, attack_config=None):
+        """Create a clean environment or one with explicit attack provenance.
+
+        ``attack_config`` is optional because a clean environment must retain
+        no attacker state.  When present, its selection and event log remain
+        on simulator-only attributes, not the PettingZoo agent interface.
+        """
         self.config = config or GridConfig()
         if render_mode not in (None, "ansi"):
             raise ValueError("render_mode must be None or ansi")
@@ -83,6 +95,11 @@ class ResourceRetrievalEnv(ParallelEnv):
         self.observation_spaces = {a: spaces.Box(0, 1, shape=(58,), dtype=np.float32) for a in self.possible_agents}
         self.action_spaces = {a: spaces.Discrete(5) for a in self.possible_agents}
         self.rng = np.random.default_rng()
+        if attack_config is not None and not isinstance(attack_config, AttackConfig):
+            raise TypeError("attack_config must be None or an AttackConfig")
+        self.attack_injector = (PersistentFalseFoodInjector(attack_config)
+                                if attack_config is not None else None)
+        self.last_attack_events = ()
 
     def observation_space(self, agent):
         return self.observation_spaces[agent]
@@ -122,6 +139,9 @@ class ResourceRetrievalEnv(ParallelEnv):
         self.fields = np.zeros((2, c.size, c.size), dtype=np.float64)
         self.events = np.zeros((c.n_agents, 3), dtype=np.float32)
         self.steps = self.delivered_total = 0
+        self.last_attack_events = ()
+        if self.attack_injector is not None:
+            self.attack_injector.reset(self.possible_agents, seed=seed)
         return self._observations(), self._infos()
 
     def step(self, actions):
@@ -156,6 +176,9 @@ class ResourceRetrievalEnv(ParallelEnv):
         for i in range(len(live)):
             channel = 0 if self.carrying[i] else 1
             self.fields[(channel, *self.positions[i])] += self.config.deposit
+        if self.attack_injector is not None:
+            self.last_attack_events = self.attack_injector.inject(
+                self.fields, self.positions, self.config.field_cap)
         np.clip(self.fields, 0, self.config.field_cap, out=self.fields)
         self.fields *= 1 - self.config.evaporation
         self.steps += 1
@@ -187,8 +210,14 @@ class ResourceRetrievalEnv(ParallelEnv):
         return result
 
     def _infos(self):
+        # Attack metadata deliberately stays out of infos: policy, defense,
+        # and external wrappers must not receive attacker labels or timing.
         return {a: dict(zip(("picked_up", "delivered", "blocked"), map(bool, self.events[i])))
                 for i, a in enumerate(self.agents)}
+
+    def attack_summary(self):
+        """Return simulator-only accounting for provenance writers, not agents."""
+        return None if self.attack_injector is None else self.attack_injector.summary()
 
     def render(self):
         """Return a global ASCII view for humans only: N nest, F food, digits occupancy."""

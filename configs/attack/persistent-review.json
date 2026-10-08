@@ -1,0 +1,8 @@
+{
+  "compromised_count": 1,
+  "requested_deposit": 1.0,
+  "per_step_budget": 1.0,
+  "episode_budget": 20.0,
+  "enabled": true,
+  "mode": "persistent"
+}

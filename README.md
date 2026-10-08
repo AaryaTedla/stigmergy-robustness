@@ -14,13 +14,19 @@ The project asks whether a lightweight defense based only on an agent's local ph
 
 ## Current status
 
-Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Tusti's local-defense foundation now includes temporal local-history features and a timeout baseline in `src/stigmergy/defense.py`; it is not yet integrated into a learned policy or attack evaluation. PPO training, attacks, trajectory datasets, and comparative results remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
+Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Rohan's first-review attack/provenance foundation adds one bounded persistent false-food injector, paired clean/injection-disabled/attacked fixture controls, and JSONL trajectory accounting; it is not learned-policy evidence. Tusti's local-defense foundation includes temporal local-history features and a timeout baseline in `src/stigmergy/defense.py`; it is not yet integrated into a learned policy or attack evaluation. PPO training, decoy/intermittent attacks, split trajectory datasets, and comparative results remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
 
 ## Local-defense foundation
 
 `LocalHistoryFeatures` converts one agent's observation and its own preceding action into 12 named, bounded history features. Construct one instance per agent, call `reset()` at each episode, and call `update(observation, previous_action)` for each new observation; use `None` for the initial observation. `LocalTimeoutDefense` wraps an already selected action and, after a configurable number of steps without pickup or delivery, uses only visible food/nest landmarks and the local boundary mask to redirect movement. Both are simulator-only rule-based components; they are not a detector, learned policy, or evidence of attack robustness.
 
 After installing the pinned development dependencies below, run their focused unit checks with `python -m pytest -q tests/test_defense.py`. The full first-review comparisons still require the shared PPO and attack/trajectory milestones.
+
+## Attack and trajectory foundation
+
+`AttackConfig` and `PersistentFalseFoodInjector` in `src/stigmergy/attacks.py` implement the review's persistent, nonnegative false-food deposits. The environment selects a fixed seeded compromised subset at reset; after legal movement and the ordinary pickup/delivery transition, it permits deposits only at those agents' actual occupied cells. Per-step/episode budgets and the same food-field cap constrain mass; requested, authorized, and applied mass are logged separately. Attacker IDs and logs remain simulator-only provenance and never enter observations or infos.
+
+`python -m stigmergy.cli record-fixture` records a clearly labelled privileged scripted fixture to a fresh directory as `manifest.json` plus `steps.jsonl`. It supports `clean`, `injection_disabled`, and `attacked` scenarios sharing a seed and attack configuration. The output is for mechanics/provenance checks, not policy training, a baseline, or a robustness result. See [Rohan's walkthrough](docs/ROHAN_FIRST_REVIEW.md) and decision 0002 for usage and limitations.
 
 ## Run the first-review simulator
 
