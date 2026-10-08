@@ -77,6 +77,7 @@ These are agreed implementation requirements, not proof that code already exists
 ## Current verified repository state
 
 - A clean grid environment and scripted mechanics demo are implemented and verified; see the implementation entry below.
+- A first local-defense foundation exists in `src/stigmergy/defense.py`: agent-local temporal features and a deterministic timeout baseline. Eight focused unit checks passed on Python 3.12. The checks loaded this module without the environment package initializer because the pinned Gymnasium/PettingZoo dependencies are not installed in the current interpreter; full repository integration checks remain unrun. This is a component checkpoint, not attack evaluation or a completed Tusti milestone.
 - No trained policy, attack injector, trajectory generator, detector, dataset, checkpoint, or research benchmark result exists here.
 - The files in `docs/reference/` are finalized project documents copied into this repository as canonical references.
 - The README JSON-configured demo and test commands are runnable. Training and evaluation commands and their broader dependency stack remain planned.
@@ -124,5 +125,6 @@ When code exists, append concise entries under these headings instead of rewriti
 
 - Establish a functioning PPO/PettingZoo/SuperSuit adapter and pin validated versions before treating the planned commands as runnable.
 - Confirm learned policies use the pheromone channels before evaluating attacks against them.
+- Install and validate the pinned Python 3.11 environment, then run the full suite and integrate local history/timeout behavior with reproducible clean, injection-disabled, attacked, and defended comparisons once the PPO and attack/trajectory prerequisites are available.
 - Freeze the final test manifest before held-out evaluation and retain clean/control/attack pairings.
 - Recheck the qualified dataset finding and literature coverage before manuscript submission.
