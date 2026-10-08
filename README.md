@@ -16,6 +16,34 @@ The project asks whether a lightweight defense based only on an agent's local ph
 
 Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Shashannk's clean shared-PPO pipeline and local debugging controller now run with reproducible short development diagnostics; useful learning and pheromone reliance remain unverified. Rohan's attack/provenance foundation adds one bounded persistent false-food injector and paired fixture controls. Tusti's local history and timeout baseline are now integrated with matched PPO/attack development comparisons and plots; see [Tusti's walkthrough](docs/TUSTI_FIRST_REVIEW.md) for usage and the negative timeout result. Decoy/intermittent attacks, split trajectory datasets, and research comparisons remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
 
+## Updated eight-agent review demo
+
+Decision [0005](docs/decisions/0005-nest-anchored-home-review.md) corrects home
+pheromone: empty agents deposit weakening trails when moving outside the nest;
+stationary/blocked outside agents add none. Food deposition remains unchanged.
+Use `configs/env/review-eight.json` (8×8, eight agents) and the unchanged
+one-attacker config (12.5%). Previous two-agent results remain historical.
+
+See [review slides, speaking notes and commands](docs/REVIEW_DEMO.md). The latest
+verified Linux Python 3.12 run passed 83 tests, fresh 4,096-transition smoke and
+300,032-transition training, checkpoint reload, 96 matched comparison episodes
+and 16 frozen-policy sensitivity episodes within 162 seconds. Stochastic
+clean/attacked mean team delivery was equal at 7.67; timeout variants delivered
+zero and deterministic delivery remained zero. Input ablation improved sampled
+retrieval slightly; useful pheromone coordination/robustness remain unproven.
+
+```bash
+python scripts/run_review_budget.py --output artifacts/review-eight-new
+python scripts/review_evidence.py figures --root artifacts/review-eight-new
+```
+
+The runner applies a common 30-minute experiment budget. Output directories must
+be new. Generated figures are in `artifacts/review-eight/figures/`; updated team
+handbook is `output/pdf/capstone_implementation_handbook.pdf` (12 pages).
+Artifacts are ignored by Git; share images separately. Running existing two-
+agent configs now uses the corrected mechanics, and their old checkpoints are
+incompatible. Older walkthrough results below describe historical runs.
+
 ## Shared PPO review pipeline
 
 See [Shashannk's walkthrough](docs/SHASHANNK_FIRST_REVIEW.md) for the code reading order, Windows setup, config fields and measured results. Install `requirements-training.lock` for the optional CPU training stack and install the package editable. Then run:

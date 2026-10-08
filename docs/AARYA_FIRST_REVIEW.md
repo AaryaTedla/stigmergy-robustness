@@ -1,5 +1,10 @@
 # Aarya's first-review simulator walkthrough
 
+> Historical first-review milestone. Home mechanics and review conditions are now
+> superseded by [decision 0005](decisions/0005-nest-anchored-home-review.md).
+> Use [the updated demo guide](REVIEW_DEMO.md) for current commands/results; retain
+> the earlier measurements below as historical evidence.
+
 This milestone implements simulated clean resource retrieval and field mechanics. It does not complete the learned-policy capstone or establish attack robustness. Shashannk's policy milestone follows after this branch is reviewed and merged.
 
 ## Reading order

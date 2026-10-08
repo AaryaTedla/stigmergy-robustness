@@ -76,6 +76,11 @@ These are agreed implementation requirements, not proof that code already exists
 
 ## Current verified repository state
 
+- Latest verified milestone: corrected nest-anchored home mechanics and fresh
+  eight-agent minority-condition development runs; see the 2026-10-09 entry
+  below and [the updated demo guide](REVIEW_DEMO.md). Earlier entries preserve
+  historical results and must not be read as the current mechanics.
+
 - A clean grid environment and scripted mechanics demo are implemented and verified; see the implementation entry below.
 - A first local-defense foundation exists in `src/stigmergy/defense.py`: agent-local temporal features and a deterministic timeout baseline. Eight focused checks initially passed via an isolated Python 3.12 import. Those checks now also pass through the installed package in Shashannk's 61-test full-stack suite, including initial-observation timing. This component checkpoint was subsequently integrated into the development comparison pipeline recorded below; robustness remains unverified.
 - A first attack/provenance foundation exists in `src/stigmergy/attacks.py` and `src/stigmergy/trajectories.py`: one persistent bounded nonnegative false-food injector, seeded episode-fixed attacker selection, per-step/episode accounting, injection-disabled twins, and JSONL local-observation trajectory records with separate simulator-only labels. CPython 3.14.4 with the locked dependencies passed all 46 tests; seed-7 scripted clean, disabled, and attacked fixtures each delivered eight units in 89 steps, and clean/disabled policy-visible records matched. These are mechanics/accounting checks only; PPO development rollouts were subsequently integrated below. CPython 3.11 revalidation, attack effectiveness, data splits and the full research comparisons remain unverified.
@@ -121,6 +126,8 @@ When code exists, append concise entries under these headings instead of rewriti
 
 ### Implemented and verified
 
+2026-10-08 — Fresh Linux review verification on clean source revision `76970cc`: simulator/core checks on Python 3.11.16 passed 50 tests with two optional-stack skips. The pinned training lock failed resolution on Python 3.11 because `contourpy==1.4.0` requires Python >=3.12. A separate Python 3.12.14 environment installed the unchanged lock, passed dependency consistency and all 73 tests. A fresh 4096-transition PPO run passed parameter-update/reload checks and reproduced stochastic means 1.75 before/3.75 after; deterministic means remained zero. The fresh 48-episode comparison preserved its checkpoint and reproduced team means 3.75 without timeout/zero with timeout, zero injection loss, -2 honest-unit timeout gain, and undefined recovery. Clean/disabled fixture records matched; attacked fixture applied 20 units; all scripted fixtures delivered eight units in 89 steps. Actual-state PNGs and two-slide speaking notes were generated under ignored `artifacts/review-current/`. No source mechanics, training budgets, defense rules, or evaluation protocol changed. This verifies Linux execution and preserves negative results, not useful coordination or robustness.
+
 2026-10-07 — Aarya's clean simulator milestone (`src/stigmergy/environment.py`, `src/stigmergy/cli.py`, `configs/env/*.json`, `tests/test_environment.py`). Decision 0001 specifies co-location, pickup contention, update order, observations, shared reward, bounds, and lifecycle. CPython 3.11.16 with pinned dependencies passed 27 pytest cases, including the PettingZoo parallel API test, deterministic 100-step replay, conservation, local observation isolation, and repeated demo artifact comparison. Editable package installation succeeded. Seed 7 scripted fixtures delivered eight units in 89 steps (8×8/two agents) and 55 steps (16×16/eight agents). Validation used working-tree changes on base revision `3c7cc20`; committed revision provenance must be captured in fresh runs after commit. Rule-based/scripted mechanics evidence only; no learned coordination, robustness, diffusion, or evaluation claim. Team review pending.
 
 2026-10-08 — Rohan's persistent false-food attack/provenance milestone (`src/stigmergy/attacks.py`, `src/stigmergy/trajectories.py`, `configs/attack/persistent-review.json`, `tests/test_attacks.py`). Decision 0002 specifies fixed seeded attacker selection, occupied-cell nonnegative food deposits after legal movement/pickup-delivery, shared field cap/evaporation, global per-step/episode applied-mass budgets, and clean/injection-disabled/attacked controls. CPython 3.14.4 with locked dependencies passed 46 pytest cases. Seed-7 scripted development fixtures produced 89 steps and eight deliveries in every scenario; injection-disabled and clean policy-visible records matched, while the attacked run selected `agent_1`, requested 89 units, and authorized/applied the 20-unit episode budget. These fixtures and logs verify implementation accounting, not attack degradation or learned-policy coordination. The declared Python 3.11 target was unavailable and requires a fresh recheck; PPO, decoy/intermittent modes, grouped data splits, and evaluation remain incomplete. Team review pending.
@@ -151,10 +158,65 @@ detector work and held-out evaluation remain pending. See
 [Tusti's walkthrough](TUSTI_FIRST_REVIEW.md). Team review pending; verified on
 working-tree changes based on `cf260b6`.
 
+### Nest-anchored eight-agent review verification - 2026-10-09
+
+- Decision 0005 supersedes ordinary empty-agent home deposition. Per-agent
+  successful outside movement counters reset on nest visits; empty moving
+  outside deposits are `deposit * home_decay**counter` with default .95.
+  Empty agents inside deposit normally; stationary/blocked outside agents do
+  not deposit home. Carrying food deposition, step ordering, clipping,
+  evaporation, observation shape, reward and attack capability remain unchanged.
+- New explicit 8×8/eight-agent config and three-action-seed comparison config
+  retain old two-agent configurations. Disabled/attacked runs select one
+  productive attacker (12.5%). Saved historical artifacts remain untouched;
+  running an old config now uses the NEW mechanics, and old checkpoints are
+  rejected by source-hash validation.
+- Pinned Linux Python 3.12.14 passed 83 tests and package compatibility checks.
+  Tests cover outbound amounts, counter/nest/episode reset, stationary/blocked
+  deposits, unchanged food, shared reward, conservation, local observations,
+  attack accounting, ablation channel boundaries and incomplete training on
+  interruption. Repeated scripted fixtures and matched controls passed.
+- Fresh seed-7 smoke: 4,096 agent transitions, stochastic mean 6.25 to 6.00,
+  deterministic zero. Fresh main training: requested 300,000, actual 300,032
+  transitions (37,504 world steps); checkpoint finite/update/reload checks
+  passed. Four-map/action-seed-7 stochastic mean 6.25 to 7.00; deterministic
+  zero. Do not confuse that four-episode diagnostic with the 12-episode mean.
+- Six matched scenarios: 96 episodes on development maps 100–103, stochastic
+  action seeds 7/8/9 and deduplicated deterministic seeds. Stochastic team
+  clean/disabled/attacked means all 7.6667; every timeout variant zero. Honest
+  disabled 6.4167 versus attacked 6.5833, mean injection loss -.1667 and timeout
+  gain -6.5833. Deterministic delivery remained zero in all six scenarios.
+  Recovery undefined in 15/16 groups; one positive-loss group has recovery -6.
+  Clean/disabled local hashes match, selected subsets match and checkpoint
+  parameters remain unchanged. No harmful mean team disruption is established.
+- Separate frozen-policy clean input ablation: 16 episodes, stochastic full
+  mean 7.6667 versus zeroed 8.0000; same-observation action differences 21.11%
+  stochastic / 49.75% deterministic. Stochastic paired-trajectory action changes
+  51.26% over overlapping steps. Both deterministic delivery means zero. This
+  measures input sensitivity, not beneficial trail use or the required trained
+  no-pheromone baseline. One training seed/development maps remain limitations.
+- All experiment stages completed in 161.5 seconds under a common 1,800-second
+  deadline; source hashes/configs/seeds/provenance and budget are in ignored
+  `artifacts/review-eight/`. Actual scripted states at 0/10/20/final=23 for
+  clean/disabled/attacked delivered eight units; repeats match exactly.
+  Two-agent new-mechanics waiting diagnostic decays .66158 at step 56 to
+  .02044 at step 89 (×.9 per wait), replacing the former 8.7 hotspot.
+- New readable state PNGs, training/delivery histories, team/honest episode
+  plots, injection-mass/observation-change curves and sensitivity plots have
+  been inspected. Observation changes are not detector scores or confirmed
+  harmful exposure. [Review guide](REVIEW_DEMO.md) supplies two-slide text,
+  speaking notes and Linux/Windows commands. The updated searchable handbook
+  retains exactly 12 pages with linked contents/bookmarks; all pages rendered
+  and inspected, with no page-bound violations. Source revision is `76970cc`
+  plus verified working-tree changes; commits/pushes are left to the user.
+- Longer/multiple-seed reliable policies, learned detector/score mitigation,
+  decoy/intermittent attacks, grouped datasets, trained no-pheromone/cautionary
+  baselines and final held-out robustness evaluation remain future work.
+
 ### Open risks and decisions
 
-- Revalidate the pinned shared PPO training stack on the declared Python 3.11 target and audit the narrow adapter when expanding the simulator's fixed lifecycle.
-- Confirm learned policies use the pheromone channels before evaluating attacks against them.
+- Resolve the training lock's demonstrated Python 3.11 incompatibility (`contourpy==1.4.0` requires Python >=3.12) before claiming full-stack support on the declared target. Linux Python 3.12.14 is now verified. Audit the narrow adapter when expanding the simulator's fixed lifecycle.
+- Frozen-policy input sensitivity is now measured; establish beneficial pheromone use and reliable cooperation before interpreting robustness.
 - Investigate the negative timeout development result and confirm pheromone reliance before the full required baseline study; development comparisons do not establish robustness.
 - Freeze the final test manifest before held-out evaluation and retain clean/control/attack pairings.
 - Recheck the qualified dataset finding and literature coverage before manuscript submission.

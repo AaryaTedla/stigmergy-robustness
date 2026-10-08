@@ -1,5 +1,10 @@
 # Rohan's first-review attack and trajectory walkthrough
 
+> Historical first-review milestone. Home mechanics and review conditions are now
+> superseded by [decision 0005](decisions/0005-nest-anchored-home-review.md).
+> Use [the updated demo guide](REVIEW_DEMO.md) for current commands/results; retain
+> the earlier measurements below as historical evidence.
+
 This checkpoint implements a bounded persistent false-food injection and an
 auditable trajectory format. It is simulator mechanics/provenance work only:
 the repository still has no parameter-shared PPO policy, learned-policy attack

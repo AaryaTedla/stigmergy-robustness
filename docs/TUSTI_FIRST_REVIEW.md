@@ -1,5 +1,10 @@
 # Tusti: first-review integration
 
+> Historical first-review milestone. Home mechanics and review conditions are now
+> superseded by [decision 0005](decisions/0005-nest-anchored-home-review.md).
+> Use [the updated demo guide](REVIEW_DEMO.md) for current commands/results; retain
+> the earlier measurements below as historical evidence.
+
 The previously blocked part now connects the shared PPO checkpoint, bounded
 persistent injector, local history and timeout baseline. It records six matched
 development scenarios and creates comparison plots. This is simulated grid

@@ -1,5 +1,8 @@
 # Decision Record: clean grid pilot mechanics
 
+> Home deposition is superseded by [decision 0005](0005-nest-anchored-home-review.md).
+> This record preserves the originally verified mechanics.
+
 **Status:** Accepted (mechanics validated; team review pending)
 
 **Date:** 2026-10-07

@@ -123,3 +123,20 @@ def test_failed_training_preserves_manifest_and_initial_checkpoint(tmp_path, mon
     manifest = json.loads((tmp_path / "failed" / "manifest.json").read_text())
     assert manifest["status"] == "failed" and "deliberate" in manifest["error"]
     assert (tmp_path / "failed" / "initial.zip").is_file()
+
+
+def test_interrupted_training_is_incomplete_and_not_comparable(tmp_path, monkeypatch):
+    """Budget SIGINT retains provenance/initial weights without a final checkpoint."""
+    grid, config = small_configs(tmp_path)
+
+    def interrupted_learn(*args, **kwargs):
+        raise KeyboardInterrupt("budget fixture")
+
+    monkeypatch.setattr(PPO, "learn", interrupted_learn)
+    with pytest.raises(KeyboardInterrupt):
+        run_training(grid, config, tmp_path / "interrupted")
+    manifest = json.loads((tmp_path / "interrupted/manifest.json").read_text())
+    assert manifest["status"] == "incomplete"
+    assert (tmp_path / "interrupted/initial.zip").is_file()
+    assert not (tmp_path / "interrupted/policy.zip").exists()
+    assert not (tmp_path / "interrupted/summary.json").exists()

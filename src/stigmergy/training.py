@@ -182,7 +182,7 @@ def run_training(grid_path, training_path, output):
         save_manifest()
         return summary
     except BaseException as error:
-        manifest.update(status="failed", error=f"{type(error).__name__}: {error}",
+        manifest.update(status="incomplete" if isinstance(error, KeyboardInterrupt) else "failed", error=f"{type(error).__name__}: {error}",
                         elapsed_seconds=time.perf_counter() - start)
         save_manifest()
         raise

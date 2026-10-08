@@ -81,13 +81,13 @@ def test_pickup_contention_no_negative_food():
 
 def test_deposit_cap_decay_and_channels():
     env = fixture(deposit=2, field_cap=3, evaporation=0.5)
-    env.positions[:] = (2, 2)
+    env.positions[:] = (1, 1)
     env.step(stay(env))
-    assert env.fields[1, 2, 2] == 1.5
+    assert env.fields[1, 1, 1] == 1.5
     assert env.fields[0].sum() == 0
     env.positions[:] = [(1, 3), (6, 6)]
     env.step(stay(env))
-    assert env.fields[0, 1, 3] == 1 and env.fields[1, 2, 2] == 0.75
+    assert env.fields[0, 1, 3] == 1 and env.fields[1, 1, 1] == 0.75
     assert np.isfinite(env.fields).all() and (env.fields >= 0).all()
 
 
@@ -171,3 +171,49 @@ def test_demo_reproducibility(tmp_path):
     assert summaries[0]["completed"] and summaries[0]["delivered"] == 8
     assert (tmp_path / "a/snapshot.svg").read_bytes() == (tmp_path / "b/snapshot.svg").read_bytes()
     assert json.loads((tmp_path / "a/summary.json").read_text()) == summaries[0]
+
+
+def test_nest_anchored_outbound_and_return():
+    """Outbound deposits decay with movement age; returning resets the counter."""
+    env = fixture(evaporation=0)
+    env.positions[0] = (1, 1)
+    env.step({"agent_0": 2, "agent_1": 0})
+    assert env.steps_since_nest[0] == 1
+    assert env.fields[1, 1, 2] == pytest.approx(.95)
+    env.step({"agent_0": 3, "agent_1": 0})
+    assert env.steps_since_nest[0] == 2
+    assert env.fields[1, 2, 2] == pytest.approx(.95**2)
+    env.step({"agent_0": 4, "agent_1": 0})
+    env.step({"agent_0": 1, "agent_1": 0})
+    assert env.steps_since_nest[0] == 0
+    assert env.fields[1, 1, 1] == 1
+    env.reset(seed=7)
+    assert not env.steps_since_nest.any()
+
+
+@pytest.mark.parametrize("action", [0, 1])
+def test_outside_wait_or_block_only_evaporates(action):
+    """Stationary/blocked outside agents cannot build home concentration."""
+    env = fixture()
+    env.positions[0] = (0, 3)
+    env.fields[1, 0, 3] = 2
+    env.step({"agent_0": action, "agent_1": 0})
+    assert env.fields[1, 0, 3] == pytest.approx(1.8)
+    assert env.steps_since_nest[0] == 0
+
+
+def test_stationary_carrying_food_unchanged():
+    """Food is deposited after pickup and still deposited while waiting loaded."""
+    env = fixture()
+    env.positions[0] = (1, 3)
+    env.step(stay(env))
+    assert env.fields[0, 1, 3] == pytest.approx(.9)
+    env.step(stay(env))
+    assert env.fields[0, 1, 3] == pytest.approx(1.71)
+    assert env.fields[1, 1, 3] == 0
+
+
+@pytest.mark.parametrize("value", [-.1, 1.1, True, float("nan")])
+def test_invalid_home_decay(value):
+    with pytest.raises(ValueError):
+        GridConfig(home_decay=value)

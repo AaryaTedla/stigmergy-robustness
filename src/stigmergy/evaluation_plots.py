@@ -52,7 +52,7 @@ def plot_comparisons(rows, contrasts, grid, output):
     modes = tuple(dict.fromkeys(r["action_mode"] for r in rows))
     attack = next(r for r in rows if r["scenario"] == "attacked")
     caption = (f"Development integration only | N={grid.n_agents}, k={attack['compromised_count']} "
-               f"({attack['compromised_fraction']:.0%}) | one training seed\n"
+               f"({attack['compromised_fraction']:.1%}) | one training seed\n"
                "Bars: means; dots: paired groups. No final held-out or training-seed uncertainty claim.")
     with plt.rc_context({"svg.hashsalt": "stigmergy-review-v1", "font.family": "DejaVu Sans"}):
         figure, axes = plt.subplots(2, len(modes), figsize=(7 * len(modes), 8), squeeze=False)

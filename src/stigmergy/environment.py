@@ -28,6 +28,13 @@ zeros except the boundary channel. No global map or absolute position is
 provided to policies. Public simulator arrays are for tests/rendering only;
 future policy and defense code must use observations, not these arrays.
 
+Home deposits are nest-anchored (decision 0005). Nest visits reset a movement
+counter; successful outside moves increment it. Empty agents outside deposit
+deposit * home_decay**counter only when moving. Inside the nest they deposit
+the ordinary amount. Waiting/blocked outside agents deposit no home. Carrying
+food deposits remain unchanged. Overlap need not produce a perfect gradient.
+The counter is internal mechanics, not another observation channel.
+
 Fields have shape (2, size, size): food channel 0, home channel 1. Deposits
 occur at actual post-movement positions, are nonnegative, and share the cap
 and evaporation rule. The optional first-review persistent attack uses the
@@ -55,6 +62,7 @@ class GridConfig:
     deposit: float = 1.0
     field_cap: float = 10.0
     evaporation: float = 0.1
+    home_decay: float = 0.95
 
     def __post_init__(self):
         for name in ("size", "n_agents", "horizon", "food_per_patch"):
@@ -63,7 +71,7 @@ class GridConfig:
                 raise ValueError(f"{name} must be a positive integer")
         if self.size < 4:
             raise ValueError("size must be at least 4")
-        for name in ("deposit", "field_cap", "evaporation"):
+        for name in ("deposit", "field_cap", "evaporation", "home_decay"):
             value = getattr(self, name)
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not np.isfinite(value):
                 raise ValueError(f"{name} must be a finite number")
@@ -71,6 +79,8 @@ class GridConfig:
             raise ValueError("require 0 <= deposit <= field_cap and field_cap > 0")
         if not 0 <= self.evaporation <= 1:
             raise ValueError("evaporation must be in [0, 1]")
+        if not 0 <= self.home_decay <= 1:
+            raise ValueError("home_decay must be in [0, 1]")
 
 
 class ResourceRetrievalEnv(ParallelEnv):
@@ -131,6 +141,7 @@ class ResourceRetrievalEnv(ParallelEnv):
         self.agents = self.possible_agents.copy()
         self.positions = np.array([(i // 2 % 2, i % 2) for i in range(c.n_agents)])
         self.carrying = np.zeros(c.n_agents, dtype=bool)
+        self.steps_since_nest = np.zeros(c.n_agents, dtype=np.int64)
         self.nest = np.zeros((c.size, c.size), dtype=bool)
         self.nest[:2, :2] = True
         self.food = np.zeros((c.size, c.size), dtype=np.int32)
@@ -145,7 +156,12 @@ class ResourceRetrievalEnv(ParallelEnv):
         return self._observations(), self._infos()
 
     def step(self, actions):
-        """Apply one complete batch atomically with respect to invalid input."""
+        """Move, update counters, collect, deposit, inject and evaporate.
+
+        Successful displacement outside increments the counter regardless of
+        load; nest occupancy resets it. Post-pickup load chooses the channel.
+        Invalid batches change no state; blocked/stay actions do not count.
+        """
         if not self.agents:
             if actions:
                 raise ValueError("reset before stepping an inactive environment")
@@ -156,12 +172,19 @@ class ResourceRetrievalEnv(ParallelEnv):
             raise ValueError("actions must be integers from 0 to 4")
         live = self.agents.copy()
         self.events.fill(0)
+        moved = np.zeros(len(live), dtype=bool)
         for i, a in enumerate(live):
             target = self.positions[i] + self.MOVES[int(actions[a])]
             if np.all((target >= 0) & (target < self.config.size)):
+                moved[i] = not np.array_equal(target, self.positions[i])
                 self.positions[i] = target
             else:
                 self.events[i, 2] = 1
+        for i in range(len(live)):
+            if self.nest[tuple(self.positions[i])]:
+                self.steps_since_nest[i] = 0
+            elif moved[i]:
+                self.steps_since_nest[i] += 1
         deliveries = 0
         for i in self.rng.permutation(len(live)):
             p = tuple(self.positions[i])
@@ -174,8 +197,16 @@ class ResourceRetrievalEnv(ParallelEnv):
                 self.carrying[i] = True
                 self.events[i, 0] = 1
         for i in range(len(live)):
-            channel = 0 if self.carrying[i] else 1
-            self.fields[(channel, *self.positions[i])] += self.config.deposit
+            p = tuple(self.positions[i])
+            if self.carrying[i]:
+                self.fields[(0, *p)] += self.config.deposit
+            elif self.nest[p]:
+                self.fields[(1, *p)] += self.config.deposit
+            elif moved[i]:
+                # Nest-visit age weakens outbound deposits. Waiting cannot
+                # reinforce a home hotspot outside the nest.
+                self.fields[(1, *p)] += (self.config.deposit *
+                    self.config.home_decay ** int(self.steps_since_nest[i]))
         if self.attack_injector is not None:
             self.last_attack_events = self.attack_injector.inject(
                 self.fields, self.positions, self.config.field_cap)

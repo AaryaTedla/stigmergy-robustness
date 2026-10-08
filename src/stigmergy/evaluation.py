@@ -24,8 +24,8 @@ timeout. Recovery gain/loss is undefined for loss <= 0. Timeout activity is not
 a classifier alarm and cannot supply detection precision/recall/false alarms.
 
 The injector preserves productive PPO actions; no reduced-worker behavior is
-modeled. The current two-agent checkpoint with one compromised agent is a 50%
-integration test, not a minority result. Statistics are reported separately by
+modeled. Historical two-agent checkpoints use 50% compromise; eight-agent review runs
+use one attacker (12.5%). Neither condition alone establishes robustness. Statistics are reported separately by
 action mode; one training seed cannot supply training-seed uncertainty. No-
 pheromone/cautionary baselines and final evaluation are explicitly not run.
 Checkpoint hashes and JSON metrics support same-stack repeatability; runtime
@@ -341,7 +341,7 @@ def run_development_comparison(checkpoint, attack_path, comparison_path, output)
         _save_json(output / "manifest.json", manifest)
         return summary
     except BaseException as error:
-        manifest.update(status="failed", error=f"{type(error).__name__}: {error}")
+        manifest.update(status="incomplete" if isinstance(error, KeyboardInterrupt) else "failed", error=f"{type(error).__name__}: {error}")
         _save_json(output / "manifest.json", manifest)
         _save_json(output / "runtime.json", runtimes)
         raise

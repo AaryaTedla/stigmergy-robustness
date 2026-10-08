@@ -1,5 +1,10 @@
 # Shashannk first review: local controller and shared PPO pipeline
 
+> Historical first-review milestone. Home mechanics and review conditions are now
+> superseded by [decision 0005](decisions/0005-nest-anchored-home-review.md).
+> Use [the updated demo guide](REVIEW_DEMO.md) for current commands/results; retain
+> the earlier measurements below as historical evidence.
+
 This checkpoint implements clean development training and initial diagnostics.
 It does not establish useful learned pheromone coordination. Work was requested
 on the current local-defense branch; the user will move/commit/push the changes.

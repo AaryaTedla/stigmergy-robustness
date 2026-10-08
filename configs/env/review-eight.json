@@ -1,0 +1,10 @@
+{
+  "size": 8,
+  "n_agents": 8,
+  "horizon": 500,
+  "food_per_patch": 4,
+  "deposit": 1.0,
+  "field_cap": 10.0,
+  "evaporation": 0.1,
+  "home_decay": 0.95
+}
