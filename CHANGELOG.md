@@ -8,6 +8,7 @@ This file records verified project changes. Planned work belongs in `docs/CONTEX
 
 - Added `src/stigmergy/defense.py` with 12 agent-local temporal features derived from the documented observation and own action/progress history, plus a deterministic patience/timeout baseline using local food/nest/boundary cues.
 - Added focused tests for feature bounds and order, pheromone deltas, inferred revisitation, episode reset, timeout behavior, progress reset, local goal selection, and invalid inputs. Eight tests passed on Python 3.12 using an isolated import of the defense module. The full environment suite did not run because the interpreter lacks the pinned Gymnasium/PettingZoo dependencies; the repository targets Python 3.11.
+- Corrected both progress timers so the initial observation is not counted as an elapsed no-progress step. The eight focused checks passed again, including initial-state timing; syntax compilation and whitespace checks passed. Full-suite execution remains blocked by missing dependencies and unavailable package network access.
 - This verifies only the local component interface. PPO policy integration, attack/trajectory comparisons, plots, and the complete Tusti review milestone remain pending.
 
 ### Coding guidance

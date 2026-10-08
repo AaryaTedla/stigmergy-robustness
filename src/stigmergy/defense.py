@@ -86,9 +86,10 @@ class LocalHistoryFeatures:
         key = tuple(int(v) for v in self.position)
         self.visits[key] += 1
         self.observations += 1
-        if picked_up or delivered:
+        # The initial observation describes state, not a completed transition.
+        if previous_action is not None and (picked_up or delivered):
             self.steps_without_progress = 0
-        else:
+        elif previous_action is not None:
             self.steps_without_progress += 1
         revisit_fraction = (self.observations - len(self.visits)) / self.observations
         return np.asarray((food_mean, float(food.max()), home_mean, float(home.max()),
@@ -119,6 +120,7 @@ class LocalTimeoutDefense:
         """Clear the baseline's own episode-local progress timer."""
         self.stale_steps = 0
         self.exploration_step = 0
+        self.initial_observation = True
 
     def select_action(self, observation, proposed_action):
         """Pass through or locally redirect ``proposed_action`` (0..4)."""
@@ -128,6 +130,9 @@ class LocalTimeoutDefense:
         if isinstance(proposed_action, bool) or not isinstance(proposed_action, (int, np.integer)) or not 0 <= proposed_action < 5:
             raise ValueError("proposed_action must be an integer from 0 to 4")
         _, picked_up, delivered, _ = obs[54:58]
+        if self.initial_observation:
+            self.initial_observation = False
+            return int(proposed_action)
         if picked_up or delivered:
             self.stale_steps = 0
             self.exploration_step = 0
