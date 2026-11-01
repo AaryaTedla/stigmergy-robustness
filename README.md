@@ -14,7 +14,7 @@ The project asks whether a lightweight defense based only on an agent's local ph
 
 ## Current status
 
-Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Shashannk's clean shared-PPO pipeline and local debugging controller now run with reproducible short development diagnostics; useful learning and pheromone reliance remain unverified. Rohan's attack/provenance foundation adds one bounded persistent false-food injector and paired fixture controls. Tusti's local history and timeout baseline are now integrated with matched PPO/attack development comparisons and plots; see [Tusti's walkthrough](docs/TUSTI_FIRST_REVIEW.md) for usage and the negative timeout result. Decoy/intermittent attacks, split trajectory datasets, and research comparisons remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
+Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Shashannk's clean shared-PPO pipeline and local debugging controller now run with reproducible short development diagnostics; useful learning and pheromone reliance remain unverified. Rohan's attack/provenance foundation adds one bounded persistent false-food injector and paired fixture controls. Tusti's local history and timeout baseline are now integrated with matched PPO/attack development comparisons and plots; see [Tusti's walkthrough](docs/TUSTI_FIRST_REVIEW.md) for usage and the negative timeout result. Phase 2A's long scout-and-follow check was promising but tied one seed at the delivery ceiling; its shorter-deadline version stayed unstable even after doubling training time. Attack/detector data generation remains blocked. See [the calibration guide](docs/PHASE2A_CALIBRATION.md). Decoy/intermittent attacks, split trajectory datasets, and research comparisons remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
 
 ## Updated eight-agent review demo
 
@@ -54,6 +54,26 @@ See [Shashannk's walkthrough](docs/SHASHANNK_FIRST_REVIEW.md) for the code readi
 ```
 
 Each output directory must be new. All agents use the same PPO actor/local value network on the existing local observation. The smoke budget is 4096 agent transitions; `configs/policy/development.json` provides the planned 300000-transition budget. The pinned training stack was verified on Windows Python 3.12.10; the declared Python 3.11 target still requires a recheck. Full-stack checks passed 61 tests. Two smoke runs matched exactly; deterministic diagnostic deliveries remained zero. A short run is pipeline evidence and does not establish useful coordination or robustness.
+
+## Phase 2A calibration (completed; Candidate J passed the clean gate)
+
+The current eight-agent review checkpoint does not show beneficial pheromone use: clean and attacked delivery were equal, and a frozen-policy input ablation slightly improved sampled delivery. Before collecting attack or detector data, Phase 2A compares three larger/repeated-retrieval development environments and three PPO seeds against separately trained no-pheromone PPO baselines plus random actions. The baseline masks only food/home pheromone entries in copied policy batches during both training and evaluation; it does not alter simulator observations or mechanics.
+
+The declared matrix, random baseline, reporting fields, and advancement gate are documented in [the Phase 2A guide](docs/PHASE2A_CALIBRATION.md) and [decision 0006](docs/decisions/0006-phase2a-calibration-contract.md). Earlier candidates had mixed paired results, but the capacity-only Candidate J follow-up passed the strict stochastic gate on seeds 7, 17 and 27: its full-minus-no-pheromone delivery was +31.25, +16.50 and +19.50, while it also beat random action in every pair. Candidate J is the clean-policy basis for Phase 2B planning; attack calibration, data splits, detector fitting and robustness claims still require their own documented Phase 2B protocol. See [decision 0012](docs/decisions/0012-phase2a-scout-follow-capacity.md).
+
+```bash
+python -m stigmergy.cli phase2a-calibrate --output artifacts/phase2a/calibration-run-001
+```
+
+If a process is interrupted after writing its manifest, resume only that exact
+plan/output pair; completed PPO artifacts are reused and a partial job is
+preserved in place:
+
+```bash
+python -m stigmergy.cli phase2a-calibrate --output artifacts/phase2a/calibration-run-001 --resume
+```
+
+This command is implemented but not yet verified in the current workspace and does not select an environment automatically or generate the final dataset.
 
 ## Local-defense foundation
 
@@ -96,7 +116,7 @@ Misleading pheromone, minority disruption, and cautionary-pheromone mitigation a
 
 The initial implementation target is Python 3.11. The expected dependency categories are NumPy, PettingZoo, SuperSuit, Stable-Baselines3, PyTorch, scikit-learn, pandas, PyArrow, PyYAML, matplotlib, and pytest. Exact versions must be selected, tested, and pinned when implementation starts.
 
-The JSON-configured `demo`, `record-fixture`, `debug-policy`, `train` and `compare-development` commands are implemented. The YAML-configured interfaces below describe future plans; use the JSON PPO commands above for the current pipeline.
+The JSON-configured `demo`, `record-fixture`, `debug-policy`, `train`, `phase2a-calibrate` and `compare-development` commands are implemented. The YAML-configured interfaces below describe future plans; use the JSON PPO commands above for the current pipeline.
 
 ```bash
 python3.11 -m venv .venv

@@ -1,0 +1,19 @@
+{
+  "format_version": 1,
+  "purpose": "development_only_phase2a_calibration",
+  "description": "Test a four-agent scout-and-follow task: a seed-varying distant adjacent food cluster with enough food and horizon for a discovered return trail to help other agents, while retaining the fair three-seed full/no-pheromone comparison.",
+  "environment_candidates": [
+    "configs/phase2a/env/candidate_g_12x12_scout_follow.json"
+  ],
+  "observation_modes": ["full", "no_pheromone"],
+  "training_seeds": [7, 17, 27],
+  "policy_config_template": "configs/phase2a/policy/{mode}_seed_{seed}.json",
+  "selection_rule": "No automatic winner. Candidate G can move to team review only when full-input PPO beats its same-seed separately trained no-pheromone PPO and random action on seeds 7, 17 and 27. This remains development work; Phase 2B does not start from a single seed.",
+  "required_reports": [
+    "per-seed stochastic and deterministic food-delivery means",
+    "full-minus-no-pheromone paired differences",
+    "random-action reference on the same diagnostic maps",
+    "completed-task rate and episode length",
+    "training/runtime provenance and every failed run"
+  ]
+}

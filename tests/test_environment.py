@@ -29,7 +29,8 @@ def stay(env):
 
 @pytest.mark.parametrize("kwargs", [{"size": 3}, {"n_agents": 0}, {"horizon": True},
     {"food_per_patch": 1.5}, {"deposit": -1}, {"deposit": 11},
-    {"field_cap": 0}, {"evaporation": 1.1}, {"deposit": float("nan")}])
+    {"field_cap": 0}, {"evaporation": 1.1}, {"deposit": float("nan")},
+    {"food_layout": "unknown"}])
 def test_invalid_config(kwargs):
     with pytest.raises(ValueError):
         GridConfig(**kwargs)
@@ -135,6 +136,24 @@ def test_pilot_observations_and_generic_reset_options():
     obs, _ = env.reset(seed=7, options={"options": 1})
     assert len(obs) == 8 and env.food.sum() == 8
     assert all(env.observation_space(a).contains(v) for a, v in obs.items())
+
+
+def test_distant_cluster_layout_is_seeded_far_adjacent_and_fixture_overridable():
+    """Candidate G's map creates one distant source without changing fixture control."""
+    config = GridConfig(size=12, n_agents=4, food_layout="distant_cluster")
+    first, second = ResourceRetrievalEnv(config), ResourceRetrievalEnv(config)
+    first.reset(seed=7)
+    second.reset(seed=7)
+    first_cells = {tuple(cell) for cell in np.argwhere(first.food > 0)}
+    second_cells = {tuple(cell) for cell in np.argwhere(second.food > 0)}
+    assert first_cells == second_cells and len(first_cells) == 2
+    left, right = tuple(first_cells)
+    assert abs(left[0] - right[0]) + abs(left[1] - right[1]) == 1
+    nest_cells = ((0, 0), (0, 1), (1, 0), (1, 1))
+    assert min(abs(row - nest_row) + abs(column - nest_column)
+               for row, column in first_cells for nest_row, nest_column in nest_cells) >= config.size
+    first.reset(seed=7, options={"food_positions": [(1, 3), (6, 6)]})
+    assert {tuple(cell) for cell in np.argwhere(first.food > 0)} == {(1, 3), (6, 6)}
 
 
 def test_seeded_rollout():

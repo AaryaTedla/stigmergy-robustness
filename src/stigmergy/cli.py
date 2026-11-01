@@ -21,7 +21,9 @@ CPU PPO stack, takes grid/policy JSON configs, and saves checkpoints, developmen
 diagnostics and provenance to a fresh output directory. These commands are
 distinct from the privileged scripted fixtures above. See training.py and the
 Shashannk walkthrough for transition units, seed partitions and limitations.
-``compare-development`` adds six matched clean/control/attack/timeout variants,
+``phase2a-calibrate`` runs the declared development-only environment/input
+matrix, stores every PPO result and a common random baseline, and never chooses
+a winner automatically. ``compare-development`` adds six matched clean/control/attack/timeout variants,
 local-history logs and static plots using a completed frozen PPO checkpoint.
 It accepts only declared development maps, and is not final held-out evaluation.
 """
@@ -149,7 +151,7 @@ def run_debug_policy(config_path, seed, output):
 
 
 def main():
-    """Expose scripted fixtures, the local debugging controller and clean PPO."""
+    """Expose scripted fixtures, development PPO, and Phase 2A calibration."""
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     demo = commands.add_parser("demo", help="scripted simulator mechanics fixture")
@@ -171,6 +173,11 @@ def main():
     train.add_argument("--config", default="configs/env/development.json")
     train.add_argument("--policy-config", default="configs/policy/review-smoke.json")
     train.add_argument("--output", required=True)
+    calibration = commands.add_parser("phase2a-calibrate", help="run declared Phase 2A PPO calibration matrix")
+    calibration.add_argument("--plan", default="configs/phase2a/calibration.json")
+    calibration.add_argument("--output", required=True)
+    calibration.add_argument("--resume", action="store_true",
+                             help="resume a plan-identical started/incomplete calibration directory")
     compare = commands.add_parser("compare-development", help="matched development PPO/timeout comparisons")
     compare.add_argument("--checkpoint", required=True)
     compare.add_argument("--attack-config", default="configs/attack/persistent-review.json")
@@ -187,6 +194,9 @@ def main():
     elif args.command == "train":
         from .training import run_training
         print(json.dumps(run_training(args.config, args.policy_config, args.output), indent=2))
+    elif args.command == "phase2a-calibrate":
+        from .calibration import run_phase2a_calibration
+        print(json.dumps(run_phase2a_calibration(args.plan, args.output, resume=args.resume), indent=2))
     else:
         from .evaluation import run_development_comparison
         print(json.dumps(run_development_comparison(args.checkpoint, args.attack_config,

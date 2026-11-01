@@ -4,6 +4,10 @@ Purpose: provide Aarya's environment foundation, not a learned-policy result.
 Grid coordinates are (row, column), with a top-left 2×2 nest. Agents carry at
 most one food unit. Two resource cells are sampled outside the nest on reset;
 an explicit pair may instead be supplied for deterministic test/demo fixtures.
+The default ``independent`` layout samples those cells separately. The optional
+``distant_cluster`` layout selects adjacent cells that are both far from the
+nest, creating a seed-varying scout-and-follow development task without adding
+global coordinates or another policy input.
 
 Usage: construct ResourceRetrievalEnv(GridConfig()), reset(seed=7), then pass
 one integer action for every live agent to step(). Actions 0..4 mean stay,
@@ -63,6 +67,7 @@ class GridConfig:
     field_cap: float = 10.0
     evaporation: float = 0.1
     home_decay: float = 0.95
+    food_layout: str = "independent"
 
     def __post_init__(self):
         for name in ("size", "n_agents", "horizon", "food_per_patch"):
@@ -81,6 +86,8 @@ class GridConfig:
             raise ValueError("evaporation must be in [0, 1]")
         if not 0 <= self.home_decay <= 1:
             raise ValueError("home_decay must be in [0, 1]")
+        if self.food_layout not in ("independent", "distant_cluster"):
+            raise ValueError("food_layout must be 'independent' or 'distant_cluster'")
 
 
 class ResourceRetrievalEnv(ParallelEnv):
@@ -129,7 +136,7 @@ class ResourceRetrievalEnv(ParallelEnv):
         candidates = [(r, col) for r in range(c.size) for col in range(c.size) if not (r < 2 and col < 2)]
         patches = options.get("food_positions")
         if patches is None:
-            patches = [candidates[i] for i in self.rng.choice(len(candidates), 2, replace=False)]
+            patches = self._sample_food_positions(candidates)
         try:
             patches = [tuple(p) for p in patches]
             valid = len(patches) == 2 and len(set(patches)) == 2 and all(p in candidates for p in patches)
@@ -154,6 +161,35 @@ class ResourceRetrievalEnv(ParallelEnv):
         if self.attack_injector is not None:
             self.attack_injector.reset(self.possible_agents, seed=seed)
         return self._observations(), self._infos()
+
+    def _sample_food_positions(self, candidates):
+        """Choose two food cells from the declared map layout using only reset RNG.
+
+        ``independent`` retains the historical unbiased two-cell sampling.
+        ``distant_cluster`` creates a single adjacent source at least ``size``
+        Manhattan steps from the nearest nest cell. The source still changes
+        with the reset seed, preventing a learned direct route from replacing
+        local exploration and pheromone use. This method is intentionally used
+        only when a test/demo has not supplied explicit fixture positions.
+        """
+        if self.config.food_layout == "independent":
+            return [candidates[i] for i in self.rng.choice(len(candidates), 2, replace=False)]
+        nest_cells = ((0, 0), (0, 1), (1, 0), (1, 1))
+        pairs = []
+        candidate_set = set(candidates)
+        for row, column in candidates:
+            for delta_row, delta_column in ((0, 1), (1, 0)):
+                other = (row + delta_row, column + delta_column)
+                if other not in candidate_set:
+                    continue
+                distances = (min(abs(cell[0] - nest_row) + abs(cell[1] - nest_column)
+                                 for nest_row, nest_column in nest_cells)
+                             for cell in ((row, column), other))
+                if min(distances) >= self.config.size:
+                    pairs.append(((row, column), other))
+        if not pairs:  # Defensive: GridConfig requires size >= 4, so this should remain reachable.
+            raise RuntimeError("distant_cluster layout has no valid distant adjacent food pair")
+        return list(pairs[int(self.rng.integers(len(pairs)))])
 
     def step(self, actions):
         """Move, update counters, collect, deposit, inject and evaporate.

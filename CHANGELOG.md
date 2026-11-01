@@ -4,6 +4,90 @@ This file records verified project changes. Planned work belongs in `docs/CONTEX
 
 ## Unreleased
 
+### Phase 2A clean-gate advancement - 2026-11-01
+
+- Added the local-only frozen-policy action-sensitivity diagnostic and ran it
+  on Candidate G's three full checkpoints. Masking only locally observed food
+  and home pheromone changed the stochastic action distribution by mean total
+  variation 0.272/0.187/0.230 and changed the most likely action on
+  25.1%/19.9%/18.7% of visible observations (seeds 7/17/27). This is input
+  sensitivity evidence, not proof of coordination or a detector feature.
+- Completed decision 0012's predeclared Candidate J capacity-only validation:
+  it retained Candidate G's long scout-and-follow task and changed only food
+  capacity from 30 to 50 units per adjacent patch. Six fresh 300,000-transition
+  PPO jobs and three random references completed under pinned Linux Python
+  3.12.14. Full-minus-no-pheromone stochastic delivery was
+  +31.25/+16.50/+19.50, while full-minus-random was +97.00/+78.25/+97.75.
+  Candidate J passed the strict three-seed mechanical development gate.
+- A timeout-interrupted invocation was preserved and the plan-identical resume
+  generated fresh `-resume-1` outputs without overwriting partial artifacts.
+  Root manifests, six PPO rows, three random rows and three paired rows were
+  inspected. The complete suite passed 107 tests. Candidate J now supports
+  Phase 2B planning; attack, detector, dataset and held-out robustness claims
+  remain unimplemented until their Phase 2B protocol is declared.
+
+### Phase 2A calibration completion and safe resume - 2026-10-31
+
+- Completed the fixed development-only calibration matrix on Linux Python
+  3.12.14: 18 clean shared-PPO runs across three eight-agent candidates, three
+  seeds and full/no-pheromone observation modes, plus nine seeded random-action
+  references. The no-pheromone model is separately trained with the same
+  58-value shape and zeros only copied food/home input entries; simulator
+  mechanics and diagnostics remain unchanged.
+- All candidates failed the strict all-three-seed advancement gate. Stochastic
+  full-minus-no-pheromone delivery was A: +2.50/-12.00/+1.75, B:
+  +8.50/-1.75/+2.75 and C: +6.75/0.00/-0.25 (seeds 7/17/27). These mixed,
+  development-only outcomes do not establish useful pheromone coordination;
+  they block attack calibration, detector/dataset generation and robustness
+  claims pending a follow-up decision record.
+- Added a plan-validated `phase2a-calibrate --resume` path. It reuses only
+  manifest-recorded jobs, preserves an interrupted training directory and
+  writes a fresh `-resume-N` sibling, while replacing only derived aggregate
+  CSV reports on recovery. Focused calibration/observation/training tests (24)
+  and the complete Python 3.12 suite (95) passed.
+- Tried two simpler Phase 2A maps after decision 0007: a 10×10 grid with eight
+  food units per food cell and a 12×12 grid with ten. The complete follow-up
+  has 12 PPO runs and six random references. Both maps beat random actions but
+  failed the same three-seed full-versus-no-pheromone rule: D was -0.25/+2.00/
+  0.00 and E was +2.75/+5.00/-0.50 across seeds 7/17/27. Phase 2B is still
+  blocked; no attack, detector, or dataset work was started. Configuration
+  checks and the complete Python 3.12 suite passed 96 tests before the run.
+- Added `output/pdf/PHASE2A_WHY_NOT_WORKING.pdf`, a plain-language explanation
+  of why the clean pheromone benefit is not yet reliable. It separates verified
+  results from likely causes, explains why the current evidence blocks Phase 2B,
+  and does not claim that the simulator or PPO pipeline is broken.
+- Completed decision 0008's one-variable slow-evaporation follow-up: Candidate
+  F kept Candidate E's map and training setup but changed evaporation from 0.10
+  to 0.02. Local-only exposure reports showed that stochastic food pheromone
+  was visible more often (55.54/39.14/49.32% for seeds 7/17/27, versus
+  34.24/28.95/37.00% in Candidate E). The complete matrix of six PPO runs and
+  three random references still failed the gate: full-minus-no-pheromone
+  delivery was +2.75/+4.00/-1.25. Candidate F beat random actions but lost the
+  fair no-pheromone comparison on seed 27. Phase 2B remains blocked. Exposure
+  and plan tests plus the complete Python 3.12 suite passed 99 tests before
+  the completed run; manifests and negative results are preserved.
+- Added the `distant_cluster` food-layout option, which preserves two local
+  food cells but places them adjacent and far from the nest using only reset
+  RNG. Explicit fixture positions still override it. Candidate G used that
+  layout with four agents, 30 food units per cell, 2% evaporation and a
+  1,100-step horizon. Its six PPO runs and three random references made it the
+  closest clean result: full-minus-no-pheromone delivery was 0.00/+8.75/+5.75,
+  with full PPO faster on every seed. The seed-7 maximum-delivery tie fails the
+  predeclared strict gate, so Phase 2B remains blocked.
+- Completed a fresh Candidate H validation with only the scout-and-follow
+  horizon reduced from 1,100 to 700. It failed rather than converting the speed
+  signal into stable delivery: full-minus-no-pheromone delivery was
+  -51.50/-42.75/+5.50, and full PPO scored zero on seeds 7 and 17. The shorter
+  deadline is not a usable environment at the existing 300,000-transition
+  budget. Focused layout/plan checks and the complete pinned Python 3.12 suite
+  passed 103 tests before this completed matrix; Phase 2B did not start.
+- Completed Candidate I, which repeated Candidate H exactly while doubling both
+  PPO modes' training budget to 600,000 agent transitions. It did not repair
+  full-input learning: full-minus-no-pheromone delivery was -50.75/-39.25/
+  -5.25, so full PPO lost on every seed. The short-horizon scout-and-follow
+  configuration is rejected at both tested budgets. The complete Python 3.12
+  suite passed 104 tests before the completed matrix; Phase 2B remains blocked.
+
 ### Nest-anchored eight-agent review verification - 2026-10-09
 
 - Decision 0005 supersedes ordinary empty-agent home deposition. Per-agent

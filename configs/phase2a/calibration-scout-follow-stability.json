@@ -1,0 +1,19 @@
+{
+  "format_version": 1,
+  "purpose": "development_only_phase2a_calibration",
+  "description": "Fresh training-budget validation of the 700-step scout-and-follow task: retain Candidate H exactly, but train both full and no-pheromone PPO policies for 600,000 agent transitions before the same three-seed delivery comparison.",
+  "environment_candidates": [
+    "configs/phase2a/env/candidate_h_12x12_scout_follow_deadline.json"
+  ],
+  "observation_modes": ["full", "no_pheromone"],
+  "training_seeds": [7, 17, 27],
+  "policy_config_template": "configs/phase2a/policy/stability_{mode}_seed_{seed}.json",
+  "selection_rule": "No automatic winner. Candidate I can move to team review only when full-input PPO beats its same-seed separately trained no-pheromone PPO and random action on seeds 7, 17 and 27. This remains development work; Phase 2B does not start from a single seed.",
+  "required_reports": [
+    "per-seed stochastic and deterministic food-delivery means",
+    "full-minus-no-pheromone paired differences",
+    "random-action reference on the same diagnostic maps",
+    "completed-task rate and episode length",
+    "training/runtime provenance and every failed run"
+  ]
+}

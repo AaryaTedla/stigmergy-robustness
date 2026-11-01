@@ -5,7 +5,9 @@ integer action vector, shared delivery rewards (N,), and simultaneous done
 flags (N,). These slots interact within one grid; they are not independent
 episodes. PPO applies a single local network to each row without IDs or
 global state. This adapter supports only ResourceRetrievalEnv's synchronous
-lifecycle and excludes attacks during clean policy training.
+lifecycle and excludes attacks during clean policy training. Phase 2A can mask
+the food/home field inputs in copied policy batches without altering simulator
+observations, creating a separately trained no-pheromone baseline.
 
 All agents reset together. At terminal/truncated boundaries, returned rows
 are the next episode's initial observations, while infos retain copies of
@@ -24,20 +26,29 @@ import numpy as np
 from stable_baselines3.common.vec_env import VecEnv
 
 from .environment import ResourceRetrievalEnv
+from .observations import OBSERVATION_MODES, apply_observation_mode
 
 
 class SharedGridVecEnv(VecEnv):
     """Batch one fixed homogeneous world into local agent slots for shared PPO."""
 
-    def __init__(self, config, map_seeds):
+    def __init__(self, config, map_seeds, observation_mode="full"):
+        """Construct one coupled world with the declared local input mode.
+
+        The mode changes only copied rows given to PPO. It does not create a
+        second simulator or alter the environment's documented observation.
+        """
         seeds = tuple(map_seeds)
         if not seeds or any(isinstance(s, bool) or not isinstance(s, int) or s < 0 for s in seeds):
             raise ValueError("map_seeds must contain nonnegative integer development seeds")
         if len(set(seeds)) != len(seeds):
             raise ValueError("map_seeds must be unique")
+        if observation_mode not in OBSERVATION_MODES:
+            raise ValueError(f"observation_mode must be one of {OBSERVATION_MODES}")
         self.world = ResourceRetrievalEnv(config)
         self.agent_order = tuple(self.world.possible_agents)
         self.map_seeds = seeds
+        self.observation_mode = observation_mode
         self.cursor = 0
         self.pending_actions = None
         self.episode_records = []
@@ -63,8 +74,9 @@ class SharedGridVecEnv(VecEnv):
         return self._batch(observations)
 
     def _batch(self, observations):
-        """Stack copied local rows in stable agent order without any augmentation."""
-        return np.stack([observations[a] for a in self.agent_order]).astype(np.float32)
+        """Stack stable local rows and apply the declared copied-input transform."""
+        return apply_observation_mode(np.stack([observations[a] for a in self.agent_order]),
+                                      self.observation_mode)
 
     def step_async(self, actions):
         """Validate and store one complete batch without moving the world yet."""

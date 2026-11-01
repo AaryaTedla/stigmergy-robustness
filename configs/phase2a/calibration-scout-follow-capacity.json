@@ -1,0 +1,19 @@
+{
+  "format_version": 1,
+  "purpose": "development_only_phase2a_calibration",
+  "description": "Fresh capacity validation of Candidate G: retain its four-agent, 1,100-step scout-and-follow task and every policy setting, but increase each adjacent food patch from 30 to 50 units so delivery capacity no longer masks the pre-observed completion-speed difference.",
+  "environment_candidates": [
+    "configs/phase2a/env/candidate_j_12x12_scout_follow_capacity.json"
+  ],
+  "observation_modes": ["full", "no_pheromone"],
+  "training_seeds": [7, 17, 27],
+  "policy_config_template": "configs/phase2a/policy/{mode}_seed_{seed}.json",
+  "selection_rule": "No automatic winner. Candidate J can move to team review only when full-input PPO strictly beats its same-seed separately trained no-pheromone PPO and random action on stochastic delivered food for seeds 7, 17 and 27. This remains development work; Phase 2B does not start from a single seed.",
+  "required_reports": [
+    "per-seed stochastic and deterministic food-delivery means",
+    "full-minus-no-pheromone paired differences",
+    "random-action reference on the same diagnostic maps",
+    "completed-task rate and episode length",
+    "source and configuration provenance"
+  ]
+}
