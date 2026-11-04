@@ -14,7 +14,7 @@ The project asks whether a lightweight defense based only on an agent's local ph
 
 ## Current status
 
-Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Shashannk's clean shared-PPO pipeline and local debugging controller now run with reproducible short development diagnostics; useful learning and pheromone reliance remain unverified. Rohan's attack/provenance foundation adds one bounded persistent false-food injector and paired fixture controls. Tusti's local history and timeout baseline are now integrated with matched PPO/attack development comparisons and plots; see [Tusti's walkthrough](docs/TUSTI_FIRST_REVIEW.md) for usage and the negative timeout result. Phase 2A's long scout-and-follow check was promising but tied one seed at the delivery ceiling; its shorter-deadline version stayed unstable even after doubling training time. Attack/detector data generation remains blocked. See [the calibration guide](docs/PHASE2A_CALIBRATION.md). Decoy/intermittent attacks, split trajectory datasets, and research comparisons remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
+Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Shashannk's clean shared-PPO pipeline and local debugging controller now run with reproducible short development diagnostics; useful learning and pheromone reliance remain unverified. Rohan's attack/provenance foundation adds one bounded persistent false-food injector and paired fixture controls. Tusti's local history and timeout baseline are now integrated with matched PPO/attack development comparisons and plots; see [Tusti's walkthrough](docs/TUSTI_FIRST_REVIEW.md) for usage and the negative timeout result. Candidate J passed Phase 2A's clean pheromone-benefit gate, while all three Phase 2B bounded persistent-attack calibrations (20-unit immediate, 200-unit immediate and 200-unit delayed) found no consistent delivery degradation. Their 108 trajectories are now packaged as a development-only calibration corpus with local records separated from audit metadata, but detector fitting, a final split dataset and robustness work remain blocked pending a new attack-calibration decision. See [the Phase 2A guide](docs/PHASE2A_CALIBRATION.md), [decision 0013](docs/decisions/0013-phase2b-attack-calibration-contract.md), [decision 0014](docs/decisions/0014-phase2b-persistent-attack-duration.md), [decision 0015](docs/decisions/0015-phase2b-delayed-persistent-attack.md) and [decision 0016](docs/decisions/0016-phase2b-development-calibration-corpus.md). Decoy/intermittent attacks, detector fitting, final split trajectory datasets, and research comparisons remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
 
 ## Updated eight-agent review demo
 
@@ -73,7 +73,74 @@ preserved in place:
 python -m stigmergy.cli phase2a-calibrate --output artifacts/phase2a/calibration-run-001 --resume
 ```
 
-This command is implemented but not yet verified in the current workspace and does not select an environment automatically or generate the final dataset.
+## Phase 2B attack calibration (completed; negative result)
+
+Phase 2B's development-only calibrations freeze Candidate J's three
+full PPO checkpoints and run matched clean, injection-disabled and bounded
+persistent-attack episodes. They keep attacker identity and injected mass out
+of policy-visible inputs and assign each complete policy/map/action family to
+one group before any future detector windows. The 20-unit matrix produced a
+mean honest-delivery injection loss of -2.17 units; a capacity-only 200-unit
+immediate follow-up produced -0.42 units; and a 200-unit attack delayed until
+transition 201 produced -2.25 units. None established consistent degradation,
+so detector fitting, defense tuning and robustness claims remain unauthorized.
+
+```bash
+python -m stigmergy.cli phase2b-calibrate \
+  --plan configs/phase2b/attack-calibration.json \
+  --output artifacts/phase2b/attack-calibration-run-001
+
+python -m stigmergy.cli phase2b-calibrate \
+  --plan configs/phase2b/attack-calibration-persistent-200.json \
+  --output artifacts/phase2b/attack-calibration-persistent-200-run-001
+
+python -m stigmergy.cli phase2b-calibrate \
+  --plan configs/phase2b/attack-calibration-persistent-delayed-200.json \
+  --output artifacts/phase2b/attack-calibration-persistent-delayed-200-run-001
+```
+
+All three matrices are verified development-only calibrations. The command does
+not select an environment automatically or generate a final dataset.
+
+## Phase 2B development calibration corpus (completed; not detector data)
+
+The corpus builder packages all three completed calibration matrices into 36
+whole development groups and 108 episodes. Each episode has a
+`model_observable` step file containing only local records and a separate
+`audit` step file containing attack events, attacker identity and global
+accounting. It has no temporal windows, train/validation/test partition,
+detector labels, fitted detector or robustness claim.
+
+```bash
+python -m stigmergy.cli phase2b-build-corpus \
+  --plan configs/phase2b/development-calibration-corpus.json \
+  --output data/generated/phase2b-development-calibration-corpus-002
+```
+
+Use a new output directory each time. Generated corpus data is intentionally
+local and ignored by Git; the plan, builder, tests and [decision 0016](docs/decisions/0016-phase2b-development-calibration-corpus.md)
+are versioned.
+
+### Inspectable agent-step CSV view
+
+For spreadsheet or dataframe inspection, export only the corpus's local records
+into one agent-step CSV. Each row represents one agent at one completed
+environment transition. The generated schema separates safe local input columns
+(58 observations plus 12 local-history features) from provenance and local
+outcome columns. The export never reads the corpus audit tree, so attacker
+identity, attack events, injected mass and global delivery cannot become CSV
+features. This is still development-only data preparation: it does not create
+detector labels, temporal windows, a train/validation/test split or a trained
+model.
+
+```bash
+python -m stigmergy.cli phase2b-export-agent-steps \
+  --corpus data/generated/phase2b-development-calibration-corpus-003 \
+  --output data/generated/phase2b-agent-steps-001
+```
+
+See [the Phase 2B dataset roadmap](docs/PHASE2B_DATASET_ROADMAP.md) for the
+literature delta, architecture diagram, data boundary and next milestones.
 
 ## Local-defense foundation
 

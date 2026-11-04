@@ -1,12 +1,13 @@
 """Focused evidence for the bounded persistent false-food attack pilot.
 
 Run with ``python -m pytest tests/test_attacks.py`` after installing the pinned
-Python 3.11 dependencies.  The pure injector checks establish deterministic
-selection, nonnegative occupied-cell writes, budget/cap accounting, and the
-injection-disabled control.  Environment and recorder checks ensure attacker
-metadata remains outside agent observations/infos while trajectory artifacts
-retain it separately for audit.  These are mechanics/provenance checks, not
-learned-policy robustness or attack-effectiveness evidence.
+Python 3.11 dependencies. The pure injector checks establish deterministic
+selection, nonnegative occupied-cell writes, immediate and delayed timing,
+budget/cap accounting, and the injection-disabled control. Environment and
+recorder checks ensure attacker metadata remains outside agent observations/
+infos while trajectory artifacts retain it separately for audit. These are
+mechanics/provenance checks, not learned-policy robustness or attack-
+effectiveness evidence.
 """
 
 import json
@@ -56,6 +57,23 @@ def test_budget_and_field_cap_are_logged_separately():
     assert event.authorized_mass == 2 and event.applied_mass == 0.5 and fields[0, 1, 1] == 10
 
 
+def test_delayed_start_makes_no_request_until_the_declared_transition():
+    """A step-2 onset preserves two transitions, then uses normal local accounting."""
+    injector = PersistentFalseFoodInjector(AttackConfig(
+        compromised_count=1, requested_deposit=1, per_step_budget=1,
+        episode_budget=2, start_step=2,
+    ))
+    injector.reset(("agent_0",), seed=1)
+    fields = np.zeros((2, 3, 3), dtype=np.float64)
+    positions = np.array([(1, 1)])
+    assert injector.inject(fields, positions, field_cap=10) == ()
+    assert injector.inject(fields, positions, field_cap=10) == ()
+    assert not fields.any() and injector.summary()["total_requested_mass"] == 0
+    event = injector.inject(fields, positions, field_cap=10)[0]
+    assert (event.requested_mass, event.authorized_mass, event.applied_mass) == (1, 1, 1)
+    assert fields[0, 1, 1] == 1 and injector.summary()["total_applied_mass"] == 1
+
+
 def test_injection_disabled_twin_selects_same_attackers_but_writes_no_mass():
     active = AttackConfig(compromised_count=1, requested_deposit=1, per_step_budget=1, episode_budget=3)
     disabled = PersistentFalseFoodInjector(active.injection_disabled())
@@ -69,7 +87,7 @@ def test_injection_disabled_twin_selects_same_attackers_but_writes_no_mass():
 
 @pytest.mark.parametrize("kwargs", [
     {"compromised_count": 0}, {"requested_deposit": -1}, {"per_step_budget": float("nan")},
-    {"episode_budget": -1}, {"mode": "decoy"}, {"enabled": 1},
+    {"episode_budget": -1}, {"start_step": -1}, {"start_step": True}, {"mode": "decoy"}, {"enabled": 1},
 ])
 def test_invalid_attack_configuration_is_rejected(kwargs):
     with pytest.raises(ValueError):

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Why Phase 2A Has Not Passed Yet</title>
+  <style>
+    @page { size: A4; margin: 18mm 17mm 16mm; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #1f2933; font-size: 10.5pt; line-height: 1.48; }
+    h1 { color: #0f766e; font-size: 26pt; line-height: 1.15; margin: 0 0 8mm; }
+    h2 { color: #0f766e; font-size: 16pt; border-bottom: 1.2pt solid #99d4cc; padding-bottom: 2mm; margin: 8mm 0 4mm; page-break-after: avoid; }
+    h3 { color: #155e75; font-size: 12pt; margin: 5mm 0 2mm; page-break-after: avoid; }
+    p { margin: 0 0 3.3mm; }
+    ul, ol { margin: 1.5mm 0 4mm 6mm; padding-left: 5mm; }
+    li { margin-bottom: 1.7mm; }
+    .cover { padding-top: 40mm; }
+    .subtitle { color: #155e75; font-size: 15pt; margin-bottom: 14mm; }
+    .meta, .small { color: #52616b; font-size: 9pt; }
+    .banner { background: #e7f5f2; border-left: 5pt solid #0f766e; padding: 4mm 5mm; margin: 5mm 0 6mm; }
+    .warning { background: #fff6dc; border-left: 5pt solid #c78300; padding: 4mm 5mm; margin: 5mm 0 6mm; }
+    .good { background: #eaf3ff; border-left: 5pt solid #2878b8; padding: 4mm 5mm; margin: 5mm 0 6mm; }
+    .page { page-break-before: always; }
+    table { width: 100%; border-collapse: collapse; margin: 3mm 0 5mm; font-size: 9pt; page-break-inside: avoid; }
+    th { background: #d9efeb; color: #164e63; font-weight: bold; }
+    th, td { border: 0.6pt solid #b9cbd0; padding: 2.1mm; text-align: left; vertical-align: top; }
+    td.num { text-align: center; }
+    .tight { font-size: 8.3pt; }
+    .tight td, .tight th { padding: 1.6mm; }
+    code { font-family: "Courier New", monospace; font-size: 8.4pt; background: #eff4f5; padding: 1px 3px; }
+    .footer-note { margin-top: 8mm; font-size: 8.5pt; color: #61717a; border-top: 0.6pt solid #cdd9dc; padding-top: 3mm; }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <h1>Why Phase 2A Has Not Passed Yet</h1>
+    <p class="subtitle">A simple explanation of the current results</p>
+    <p>Phase 2A is not failing because the code crashed. The simulator, PPO training, and fair comparison all work. The problem is that the agents do not show a <strong>steady</strong> benefit from pheromone across repeated runs.</p>
+    <div class="warning"><strong>Short answer:</strong> pheromone sometimes helps, but it sometimes does not help or is slightly worse than the same trained policy without pheromone. Because of this, we cannot honestly say that our learned agents reliably use pheromone yet.</div>
+    <p class="meta">Based on the completed original, simple-map, slow-fading, and scout-and-follow Phase 2A checks.<br>31 October 2026 · Development-only simulator results</p>
+  </section>
+
+  <h2 class="page">1. What Phase 2A is checking</h2>
+  <p>Our agents collect food and carry it back to a nest. They can see a small area around themselves. They may also see two pheromone maps: a food trail and a home trail.</p>
+  <p>Phase 2A asks one basic question:</p>
+  <div class="banner"><strong>Does a policy trained with pheromone do better than the same policy trained without pheromone?</strong></div>
+  <p>To make this fair, we train two separate PPO models for every map and seed:</p>
+  <table>
+    <tr><th>Model</th><th>What it sees</th><th>Why we use it</th></tr>
+    <tr><td><strong>Full model</strong></td><td>Food, nest, nearby agents, boundaries, its own carrying state, and pheromone.</td><td>This is the normal model we want to study.</td></tr>
+    <tr><td><strong>No-pheromone model</strong></td><td>The same information, except the pheromone values are hidden during both training and testing.</td><td>This tells us whether pheromone itself is helping.</td></tr>
+    <tr><td><strong>Random movement</strong></td><td>No learned policy. It chooses actions randomly.</td><td>This checks that PPO is learning something useful at all.</td></tr>
+  </table>
+  <p>We use three training seeds: 7, 17, and 27. A seed changes the random starting point of learning and the order of experience. A good result must work across all three seeds, not only one lucky run.</p>
+
+  <h2>2. What we tested</h2>
+  <p>We first tested three normal maps. Then we tried two simpler maps with more food, so agents could make more repeat trips and have more chances to use trails. We also tested slower-fading pheromone and a scout-and-follow setup with one distant food cluster.</p>
+  <table class="tight">
+    <tr><th>Map</th><th>Grid</th><th>Food at each food cell</th><th>What we were checking</th><th>Passed?</th></tr>
+    <tr><td>A</td><td>12×12</td><td class="num">6</td><td>Moderate search space.</td><td>No</td></tr>
+    <tr><td>B</td><td>16×16</td><td class="num">6</td><td>Bigger search space.</td><td>No</td></tr>
+    <tr><td>C</td><td>16×16</td><td class="num">8</td><td>More repeat trips on a bigger map.</td><td>No</td></tr>
+    <tr><td>D</td><td>10×10</td><td class="num">8</td><td>Simpler map with repeat trips.</td><td>No</td></tr>
+    <tr><td>E</td><td>12×12</td><td class="num">10</td><td>Simpler map with even more repeat trips.</td><td>No</td></tr>
+    <tr><td>F</td><td>12×12</td><td class="num">10</td><td>Same as E, but pheromone fades more slowly.</td><td>No</td></tr>
+    <tr><td>G</td><td>12×12</td><td class="num">30</td><td>Four agents, one far food cluster, long horizon.</td><td>Close, but no</td></tr>
+    <tr><td>H</td><td>12×12</td><td class="num">30</td><td>Same as G, but shorter deadline.</td><td>No</td></tr>
+    <tr><td>I</td><td>12×12</td><td class="num">30</td><td>Same as H, with double training time.</td><td>No</td></tr>
+  </table>
+  <p>In total, we completed <strong>54 PPO training runs</strong>: 27 full models and 27 no-pheromone models. We also ran 27 matching random-movement checks.</p>
+
+  <h2 class="page">3. What the results say</h2>
+  <p>For each seed, the important number is:</p>
+  <div class="banner"><strong>full model score − no-pheromone model score</strong></div>
+  <p>A positive value means pheromone helped in that run. Zero means no clear help. A negative value means the no-pheromone model did better.</p>
+  <table class="tight">
+    <tr><th>Map</th><th>Seed 7</th><th>Seed 17</th><th>Seed 27</th><th>Result</th></tr>
+    <tr><td>A</td><td class="num">+2.50</td><td class="num">−12.00</td><td class="num">+1.75</td><td>One large loss.</td></tr>
+    <tr><td>B</td><td class="num">+8.50</td><td class="num">−1.75</td><td class="num">+2.75</td><td>One loss.</td></tr>
+    <tr><td>C</td><td class="num">+6.75</td><td class="num">0.00</td><td class="num">−0.25</td><td>One tie and one loss.</td></tr>
+    <tr><td>D</td><td class="num">−0.25</td><td class="num">+2.00</td><td class="num">0.00</td><td>One loss and one tie.</td></tr>
+    <tr><td>E</td><td class="num">+2.75</td><td class="num">+5.00</td><td class="num">−0.50</td><td>One loss.</td></tr>
+    <tr><td>F</td><td class="num">+2.75</td><td class="num">+4.00</td><td class="num">−1.25</td><td>One loss.</td></tr>
+    <tr><td>G</td><td class="num">0.00</td><td class="num">+8.75</td><td class="num">+5.75</td><td>One maximum-score tie.</td></tr>
+    <tr><td>H</td><td class="num">−51.50</td><td class="num">−42.75</td><td class="num">+5.50</td><td>Two large losses.</td></tr>
+    <tr><td>I</td><td class="num">−50.75</td><td class="num">−39.25</td><td class="num">−5.25</td><td>Three losses.</td></tr>
+  </table>
+  <div class="warning"><strong>Why this stops Phase 2A:</strong> every map has at least one seed where pheromone is not better. We need all three seeds to show a clear benefit before we say the effect is reliable.</div>
+  <h3>The good news</h3>
+  <ul>
+    <li>Most full models did better than random movement: 23 out of 27 comparisons.</li>
+    <li>This means PPO is learning how to collect food. The project is not stuck because the basic task is impossible.</li>
+    <li>Pheromone helped in 13 out of 27 full-versus-no-pheromone comparisons.</li>
+  </ul>
+  <h3>The problem</h3>
+  <ul>
+    <li>Pheromone was tied or worse in 14 out of 27 comparisons.</li>
+    <li>Because the result changes with the seed, we cannot tell whether a good pheromone score is a real effect or just one good training run.</li>
+  </ul>
+
+  <h2 class="page">4. Why this is probably happening</h2>
+  <p>We have not proved one single cause. These are the most likely reasons based on the experiments and the design of the task.</p>
+  <table>
+    <tr><th>Likely reason</th><th>Simple explanation</th><th>What the results support</th></tr>
+    <tr><td><strong>The other local clues are already useful.</strong></td><td>Even without pheromone, agents can see nearby food, the nest, walls, nearby agents, and whether they are carrying food. They can learn a useful search-and-return rule from these clues.</td><td>The no-pheromone models often deliver almost as much food as the full models.</td></tr>
+    <tr><td><strong>The trail is local and fades, but that is not the whole problem.</strong></td><td>An agent sees only a small 3×3 area. We slowed fading from 10% to 2% per step, and food trails became easier to see.</td><td>Food-trail visibility rose in every seed, but the full model still lost once. So longer-lasting trails alone do not solve the problem.</td></tr>
+    <tr><td><strong>Making the deadline too tight destabilizes learning.</strong></td><td>The long scout-and-follow map was close: full PPO was faster on all seeds and tied once at the maximum score. We then trained the same task with a shorter deadline.</td><td>In the short version, the full model delivered zero on two seeds. This is not a safe way to turn speed into a stronger score.</td></tr>
+    <tr><td><strong>More training time did not fix the short version.</strong></td><td>We doubled the PPO budget for both full and no-pheromone policies, keeping every other setting the same.</td><td>The full model still lost all three seeds. The short deadline is not just a small-training-budget problem.</td></tr>
+    <tr><td><strong>Learning is unstable across seeds.</strong></td><td>PPO learns from random experience. One seed may find a useful behavior, while another seed learns a different behavior that ignores or misuses trails.</td><td>The same map can be positive for one seed and negative for another.</td></tr>
+    <tr><td><strong>The food positions change across maps.</strong></td><td>Food cells are sampled from the map seeds. A trail pattern learned on one set of maps may not help equally on another set.</td><td>We see different outcomes across repeated training runs, even with the same map size.</td></tr>
+    <tr><td><strong>The task may be solvable without trail-following.</strong></td><td>With eight agents searching at the same time, some agents may find food directly. The team can still score well even if nobody follows a trail.</td><td>Full and no-pheromone models both usually beat random movement.</td></tr>
+  </table>
+  <div class="good"><strong>Important:</strong> these are good explanations to test next. They are not final proof. We should change one small thing at a time and run the same fair comparison again.</div>
+
+  <h2>5. What this does not mean</h2>
+  <ul>
+    <li>It does <strong>not</strong> mean the simulator is broken.</li>
+    <li>It does <strong>not</strong> mean PPO cannot learn. It clearly beats random movement in nearly every run.</li>
+    <li>It does <strong>not</strong> prove that pheromone never helps.</li>
+    <li>It does <strong>not</strong> mean we should force an attack or detector dataset now.</li>
+  </ul>
+  <p>It means we need one clean setup where the extra pheromone information helps in a repeatable way. Only then can we test whether a false pheromone attack damages that useful behavior.</p>
+
+  <h2 class="page">6. What we should do next</h2>
+  <p>Do not start Phase 2B yet. We have checked whether trails fade too fast, whether a clearer scout-and-follow setup helps, and whether extra training fixes the short version. The long version was close but did not pass; the short version stayed unstable. Before another experiment, the team must make one small new Phase 2A decision that answers one clear question.</p>
+  <ol>
+    <li>Use the saved local observations and action logs to check whether the full model reacts to food pheromone, or mostly follows food, nest, and wall clues.</li>
+    <li>Choose one small clean-learning change only after that check, and write it down before coding it. The change must make following a food route genuinely useful, without giving agents global information.</li>
+    <li>Keep the same fair full-versus-no-pheromone test, the same three seeds, and the same random check.</li>
+    <li>Run every planned seed. Do not select a map because one run looks good.</li>
+    <li>Start Phase 2B only if the full model is better than the no-pheromone model in all declared seeds.</li>
+  </ol>
+  <div class="warning"><strong>Why we should wait:</strong> if we make a large attack dataset now, we may end up measuring attacks on a behavior that has not been shown to depend on pheromone. That would make the final conclusion weak.</div>
+  <h2>7. Where the evidence is saved</h2>
+  <p>The first calibration is in <code>artifacts/phase2a/calibration-run-001/</code>. The simpler-map follow-up is in <code>artifacts/phase2a/simple-repeat-run-001/</code>. The slow-fading check is in <code>artifacts/phase2a/slow-evaporation-run-001/</code>. The scout-and-follow runs are in <code>artifacts/phase2a/scout-follow-run-001/</code>, <code>artifacts/phase2a/scout-follow-deadline-run-001/</code>, and <code>artifacts/phase2a/scout-follow-stability-run-001/</code>. Each run folder contains its configuration, manifest, PPO checkpoints, training logs, random checks, paired comparisons, and gate result.</p>
+  <p class="footer-note">Plain-language status as of 31 October 2026. Phase 2A has not passed yet; Phase 2B is intentionally not started.</p>
+</body>
+</html>

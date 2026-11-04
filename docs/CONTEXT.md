@@ -138,6 +138,92 @@ When code exists, append concise entries under these headings instead of rewriti
 
 ### Implemented and verified
 
+2026-11-02 — Phase 2B inspectable agent-step dataset view
+(`phase2b_dataset.py`, `phase2b-export-agent-steps`,
+`PHASE2B_DATASET_ROADMAP.md`) exported the completed development corpus into
+the ignored local directory `data/generated/phase2b-agent-steps-001/`. It
+contains 412,016 rows—one agent at one completed environment transition—from
+103,004 environment steps, 108 episodes and 36 intact groups. The CSV schema
+separates 58 local-observation and 12 local-history input columns from
+provenance (group/map/scenario/seed) and local transition outcome columns.
+The exporter reads only `model_observable` records, never opens the audit tree,
+and fails if attack metadata leaks into a local record. Focused exporter,
+corpus, Phase 2B and attack tests passed 28 cases. This is inspectable,
+development-only data preparation; it creates no temporal windows, final
+split, detector labels, trained model or robustness result.
+
+2026-11-01 — Phase 2B development calibration corpus
+(`phase2b_corpus.py`, `phase2b-build-corpus`,
+`development-calibration-corpus.json`, decision 0016) completed on pinned
+Linux Python 3.12.14. It packages all three completed negative persistent-attack
+calibrations, rather than selecting a favourable run, into the local ignored
+directory `data/generated/phase2b-development-calibration-corpus-002/`: 36
+whole development groups and 108 episodes, with three scenarios per group.
+Each model-observable step file contains only the local record; a matching audit
+tree holds scenario provenance, attacker identity, false-mass accounting,
+attack events and global/honest delivery. The corpus has no temporal windows,
+train/validation/test partition, detector labels, fitted detector, defense or
+held-out claim. The group-split manifest keeps every calibration/policy/map/
+action family together. Boundary inspection found zero simulator-only attack
+fields in 108 model-observable files. Focused corpus tests (3), focused
+corpus/Phase 2B/attack checks (26) and the complete suite (122) passed. This is
+a reproducibility/data-engineering milestone only, not evidence of an effective
+attack or a final research dataset.
+
+2026-11-01 — Phase 2B's delayed persistent-attack follow-up
+(`persistent-phase2b-delayed-200.json`,
+`attack-calibration-persistent-delayed-200.json`, decision 0015) completed on
+pinned Linux Python 3.12.14. It retained the 200-unit immediate calibration's
+three frozen Candidate J policies, four development maps, stochastic action
+seed, one episode-fixed attacker, local placement, budgets and matched
+controls, changing only onset: no false-food request during the first 200
+transitions and first permitted deposit on transition 201. The 36 fresh
+episodes in
+`artifacts/phase2b/attack-calibration-persistent-delayed-200-run-001/`
+applied the full 200-unit cap in every attacked episode. Clean and disabled
+local trajectories matched, disabled/attacked twins selected the same agent,
+and all scenario families stayed whole in the development split manifest. Mean
+paired honest-delivery injection loss was -2.25 units: one positive, six zero
+and five negative groups. Thus delayed persistent injection still did not
+establish consistent attack degradation. Focused checks (23) and the complete
+suite (119) passed. This is a third preserved negative development calibration,
+not a detector/dataset/defense/held-out robustness result; do not change the
+attack again without a new decision.
+
+2026-11-01 — Phase 2B's bounded-duration persistent-attack follow-up
+(`persistent-phase2b-200.json`,
+`attack-calibration-persistent-200.json`, decision 0014) completed on pinned
+Linux Python 3.12.14. It retained the initial calibration's three frozen
+Candidate J policies, four development maps, stochastic action seed, one
+episode-fixed attacker, local placement and all matched controls, changing
+only the false-food episode cap from 20 to 200 units. The 36 fresh episodes in
+`artifacts/phase2b/attack-calibration-persistent-200-run-001/` applied the
+full 200-unit cap in every attacked episode. Mean paired honest-delivery
+injection loss was -0.42 units: two positive, five zero and five negative
+groups. Thus longer injection duration changed trajectories but still did not
+establish consistent attack degradation. Focused Phase 2B checks (7) and the
+complete suite (114) passed. This is a second preserved negative development
+calibration, not a detector/dataset/defense/held-out robustness result; do not
+change the attack again without a new decision.
+
+2026-11-01 — Phase 2B's initial persistent-attack calibration
+(`phase2b.py`, `phase2b-calibrate`, `configs/phase2b/attack-calibration.json`,
+decision 0013) completed on pinned Linux Python 3.12.14. It verified three
+frozen Candidate J full-input checkpoints, then ran 36 matched stochastic
+development episodes: three training seeds × diagnostic maps 100--103 × clean,
+injection-disabled and attacked scenarios. The four-agent task used one
+episode-fixed attacker (25%) with the existing occupied-cell, nonnegative
+persistent false-food injector and a 1.0-per-step/20.0-per-episode budget.
+Every attacked episode applied 20.0 units; clean and disabled local trajectories
+matched, while disabled and attacked twins selected the same compromised agent.
+The mean paired honest-delivery injection loss was -2.17 units (eight zero,
+one positive and three negative groups), so this setting did not establish
+attack degradation. A group-level development split manifest was saved before
+any future temporal windows. The complete suite passed 113 tests. This is a
+preserved negative calibration result, not detector, defense, dataset,
+held-out-evaluation or robustness evidence; any changed attack calibration
+requires another decision.
+
 2026-11-01 — Phase 2A's capacity-only Candidate J validation
 (`action_sensitivity.py`, `phase2a_action_sensitivity.py`,
 `candidate_j_12x12_scout_follow_capacity.json`,

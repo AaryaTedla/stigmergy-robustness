@@ -4,6 +4,80 @@ This file records verified project changes. Planned work belongs in `docs/CONTEX
 
 ## Unreleased
 
+### Phase 2B inspectable agent-step dataset view - 2026-11-02
+
+- Added `phase2b-export-agent-steps`, a fail-closed exporter that flattens an
+  existing completed development corpus into one row per agent per environment
+  transition. Its schema separates 58 local-observation and 12 local-history
+  input columns from group/scenario provenance and local outcomes; it never
+  reads the simulator-only audit tree and rejects leaked attack metadata.
+- Exported the fresh corpus into 412,016 agent-step rows from 103,004
+  environment steps, 108 episodes and 36 intact development groups. Focused
+  exporter/corpus/Phase 2B/attack tests passed 28 cases. The view has no
+  temporal windows, train/validation/test split, detector labels, fitted model
+  or robustness claim.
+
+### Phase 2B development calibration corpus - 2026-11-01
+
+- Decision 0016 added `phase2b-build-corpus` and a versioned plan that packages
+  all three completed Phase 2B calibrations without selecting a favourable
+  attack result. It writes local policy-visible records and simulator-only audit
+  records to separate trees and fails closed on incomplete groups or leaked
+  attack fields.
+- Built the fresh local corpus with 36 intact development groups and 108
+  episodes, three scenarios per group. It has 108 model-observable and 108
+  audit step files; boundary inspection found zero simulator-only attack fields
+  in model-observable records. No temporal windows, train/validation/test split,
+  detector, defense, final dataset claim or robustness result was created.
+  Focused corpus tests passed 3 cases, focused corpus/Phase 2B/attack checks
+  passed 26 cases, and the complete suite passed 122.
+
+### Phase 2B delayed persistent-attack follow-up - 2026-11-01
+
+- Decision 0015 added a separately configured `start_step` to the bounded
+  persistent injector. The delayed plan retains the 200-unit cap, one-of-four
+  episode-fixed attacker, local occupied-cell placement, frozen Candidate J
+  policies, maps and matched controls, while leaving the first 200 transitions
+  untouched and permitting the first deposit on transition 201.
+- The new 36-episode matrix applied all 200 units in every attacked episode
+  but still did not establish consistent degradation: mean paired honest
+  injection loss was -2.25 units, with one positive, six zero and five
+  negative groups. Focused attack/Phase 2B checks passed 23 cases and the
+  complete suite passed 119. This is a third negative development calibration;
+  no detector, defense, final dataset, held-out evaluation or robustness claim
+  was created.
+
+### Phase 2B bounded-duration follow-up - 2026-11-01
+
+- Decision 0014 changed only the bounded persistent attack's episode budget
+  from 20 to 200 units, extending its possible active duration from roughly
+  20 to 200 steps of Candidate J's 1,100-step horizon. The same three frozen
+  policies, four maps, action seed, one-of-four attacker, local placement and
+  matched controls were retained.
+- The fresh 36-episode matrix applied all 200 units in every attacked episode
+  but still did not establish consistent degradation: mean paired honest
+  injection loss was -0.42 units, with two positive, five zero and five
+  negative groups. Preserve both negative calibrations; no detector, defense,
+  dataset, held-out evaluation or robustness claim was created. Focused tests
+  passed 7 cases and the complete suite passed 114 tests.
+
+### Phase 2B initial persistent-attack calibration - 2026-11-01
+
+- Added the `phase2b-calibrate` command and a versioned Candidate J plan. It
+  validates three frozen full-input checkpoints before running only matched
+  stochastic clean, injection-disabled and bounded persistent-attack rollouts.
+  It records local trajectories separately from simulator-only attack metadata
+  and creates whole-group split manifests before any future temporal windows.
+- Completed the 36-episode development calibration: three Candidate J policies
+  × four diagnostic maps × one action seed × three scenarios. Every attacked
+  episode applied the declared 20.0-unit budget, clean and disabled local
+  records matched, and disabled/attacked controls selected the same agent.
+  Mean paired honest-delivery injection loss was -2.17 units (eight zero,
+  one positive and three negative groups), so this persistent setting did not
+  establish attack degradation. No detector, defense, trajectory dataset,
+  held-out evaluation or robustness claim was created. The complete suite
+  passed 113 tests.
+
 ### Phase 2A clean-gate advancement - 2026-11-01
 
 - Added the local-only frozen-policy action-sensitivity diagnostic and ran it

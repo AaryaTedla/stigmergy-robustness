@@ -7,18 +7,21 @@ rewards, observations, food, home pheromone, or policy parameters.  The
 environment owns the field array and calls :class:`PersistentFalseFoodInjector`
 before its normal common clipping and evaporation stage.
 
-``AttackConfig`` expresses mass in the simulator's pheromone units.  A request
-is first constrained by the per-step and remaining episode budgets, then by
-the food field's remaining room under its cap.  Each ``AttackEvent`` preserves
-the requested, budget-authorized, and actually applied masses so a capped cell
-cannot make a run look as though its requested attack was fully applied.
+``AttackConfig`` expresses mass in the simulator's pheromone units. A request
+is first constrained by an optional delayed onset, the per-step and remaining
+episode budgets, then by the food field's remaining room under its cap. Each
+``AttackEvent`` preserves the requested, budget-authorized, and actually
+applied masses so a capped cell cannot make a run look as though its requested
+attack was fully applied.
 
 The compromised IDs and returned events are simulator-only provenance.  They
 must never be copied into policy observations, PettingZoo infos, detector
 features, or a controller's input.  Call ``reset(agent_ids, seed)`` at an
 episode boundary and ``inject(fields, positions, field_cap)`` once per
-environment step after movement.  The current first-review mode is persistent;
-decoy and intermittent modes remain future work.
+environment step after movement. ``start_step`` is counted from zero: a value
+of 200 leaves the first 200 completed environment transitions untouched and
+allows the first deposit on transition 201. The current attack family remains
+persistent; decoy and intermittent modes remain future work.
 """
 
 from dataclasses import asdict, dataclass
@@ -30,17 +33,20 @@ import numpy as np
 class AttackConfig:
     """Configuration for one persistent false-food attack episode.
 
-    ``compromised_count`` is fixed for an episode.  ``requested_deposit`` is
-    the desired mass per selected agent per step; both budget fields are hard
-    upper bounds on mass actually applied.  Set ``enabled`` to ``False`` for
-    an injection-disabled twin: it retains the same deterministic selection
-    but applies zero mass.  The clean control is represented by no injector.
+    ``compromised_count`` is fixed for an episode. ``requested_deposit`` is
+    the desired mass per selected agent per active step; both budget fields are
+    hard upper bounds on mass actually applied. ``start_step`` delays the
+    first possible deposit without changing attacker selection, local placement
+    or field dynamics. Set ``enabled`` to ``False`` for an injection-disabled
+    twin: it retains the same deterministic selection but applies zero mass.
+    The clean control is represented by no injector.
     """
 
     compromised_count: int = 1
     requested_deposit: float = 1.0
     per_step_budget: float = 1.0
     episode_budget: float = 20.0
+    start_step: int = 0
     enabled: bool = True
     mode: str = "persistent"
 
@@ -53,6 +59,9 @@ class AttackConfig:
             if (isinstance(value, bool) or not isinstance(value, (int, float)) or
                     not np.isfinite(value) or value < 0):
                 raise ValueError(f"{name} must be a finite nonnegative number")
+        if (isinstance(self.start_step, bool) or not isinstance(self.start_step, int) or
+                self.start_step < 0):
+            raise ValueError("start_step must be a nonnegative integer")
         if not isinstance(self.enabled, bool):
             raise ValueError("enabled must be a boolean")
         if self.mode != "persistent":
@@ -110,6 +119,7 @@ class PersistentFalseFoodInjector:
         self.total_requested_mass = 0.0
         self.total_authorized_mass = 0.0
         self.last_events = ()
+        self._completed_steps = 0
 
     def reset(self, agent_ids, seed=None):
         """Seed-select a fixed subset and clear all episode accounting.
@@ -135,6 +145,7 @@ class PersistentFalseFoodInjector:
         self.total_requested_mass = 0.0
         self.total_authorized_mass = 0.0
         self.last_events = ()
+        self._completed_steps = 0
         return self.compromised_agents
 
     def inject(self, fields, positions, field_cap):
@@ -156,6 +167,14 @@ class PersistentFalseFoodInjector:
         if (isinstance(field_cap, bool) or not isinstance(field_cap, (int, float)) or
                 not np.isfinite(field_cap) or field_cap <= 0):
             raise ValueError("field_cap must be a finite positive number")
+        # The environment calls us once after each legal movement/pickup phase.
+        # Count that call locally so delayed timing remains simulator-only and
+        # does not require exposing a global step index through observations.
+        if self._completed_steps < self.config.start_step:
+            self._completed_steps += 1
+            self.last_events = ()
+            return self.last_events
+        self._completed_steps += 1
         if not self.config.enabled:
             self.last_events = ()
             return self.last_events

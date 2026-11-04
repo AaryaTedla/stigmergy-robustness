@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Phase 2A Completion and Phase 2B Handoff</title>
+  <style>
+    @page { size: A4; margin: 17mm 16mm; }
+    * { box-sizing: border-box; }
+    body { color: #17212b; font-family: Arial, Helvetica, sans-serif; font-size: 10.4pt; line-height: 1.46; }
+    h1 { color: #0d5c63; font-size: 27pt; line-height: 1.15; margin: 0 0 5mm; }
+    h2 { color: #0d5c63; font-size: 16pt; border-bottom: 1.2pt solid #8fd0ca; margin: 8mm 0 3mm; padding-bottom: 1.5mm; page-break-after: avoid; }
+    h3 { color: #175d80; font-size: 12pt; margin: 5mm 0 2mm; page-break-after: avoid; }
+    p { margin: 0 0 3.2mm; }
+    ul, ol { margin: 1.5mm 0 4mm 6mm; padding-left: 5mm; }
+    li { margin: 0 0 1.7mm; }
+    table { border-collapse: collapse; margin: 3mm 0 5mm; page-break-inside: avoid; width: 100%; }
+    th, td { border: 0.55pt solid #b8c7cc; padding: 2mm; text-align: left; vertical-align: top; }
+    th { background: #dcefeb; color: #123f49; }
+    td.num, th.num { text-align: center; }
+    code { background: #edf2f3; font-family: "Courier New", monospace; font-size: 8.3pt; padding: 1px 3px; }
+    .cover { padding-top: 45mm; }
+    .subtitle { color: #175d80; font-size: 15pt; margin-bottom: 12mm; }
+    .meta { color: #56656e; font-size: 9pt; }
+    .page { page-break-before: always; }
+    .callout { background: #e8f6f3; border-left: 4.5pt solid #0d8a80; margin: 4mm 0 5mm; padding: 3.5mm 4.5mm; }
+    .caution { background: #fff6df; border-left: 4.5pt solid #c58a00; margin: 4mm 0 5mm; padding: 3.5mm 4.5mm; }
+    .next { background: #eaf3ff; border-left: 4.5pt solid #2379a7; margin: 4mm 0 5mm; padding: 3.5mm 4.5mm; }
+    .small { color: #56656e; font-size: 8.8pt; }
+    .footer { border-top: 0.55pt solid #c8d2d5; color: #56656e; font-size: 8.6pt; margin-top: 8mm; padding-top: 2.5mm; }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <h1>Phase 2A Completion<br>and Phase 2B Handoff</h1>
+    <p class="subtitle">What has been built, what Candidate J proves, and how to start the next phase safely</p>
+    <div class="callout"><strong>Current status:</strong> Phase 2A is complete. Candidate J passed the predeclared clean, stochastic pheromone-benefit gate on all three training seeds. The project can now plan Phase 2B, but attacks, datasets, detectors and robustness claims have not yet been created.</div>
+    <p>This guide is for a teammate beginning the next piece of work. It explains the result in plain language, points to the exact code and artifacts, and gives a disciplined Phase 2B starting sequence.</p>
+    <p class="meta">Project: Robust Stigmergic Coordination under Minority Pheromone Injection Attacks<br>Verified 1 November 2026 · Development-only simulator evidence</p>
+  </section>
+
+  <section class="page">
+    <h2>1. The project in one page</h2>
+    <p>Agents work together in a simulated grid world. They search for food, pick it up, and deliver it back to a nest. They have only a small local view, but can leave and observe food and home pheromone fields. The main research question is whether a <strong>local</strong> defense can protect useful learned pheromone coordination from a minority of agents depositing misleading food pheromone.</p>
+    <p>Before attacking pheromone, we needed evidence that the learned policy actually benefits from it. That was the job of Phase 2A.</p>
+    <table>
+      <tr><th>Phase</th><th>Question</th><th>Current state</th></tr>
+      <tr><td>Simulator and PPO foundation</td><td>Can the grid world, local observations and shared PPO policy run reproducibly?</td><td>Implemented and tested.</td></tr>
+      <tr><td>Phase 2A</td><td>Does a full-input policy do better than the same policy trained without pheromone?</td><td><strong>Passed by Candidate J</strong> on the declared stochastic gate.</td></tr>
+      <tr><td>Phase 2B</td><td>Can bounded false-food pheromone degrade that useful behavior, and can local defenses help?</td><td>Ready for protocol planning; not yet run.</td></tr>
+    </table>
+    <div class="caution"><strong>Do not overclaim:</strong> Candidate J proves a clean development result, not attack robustness. It does not prove that every deterministic rollout coordinates well, that a detector works, or that a defense improves attacked performance.</div>
+
+    <h2>2. What the agent can and cannot see</h2>
+    <p>Each policy receives a 58-value local observation: a 3×3 patch with six values per cell, then four values describing its own state. The patch includes food, nest, food pheromone, home pheromone, other-agent occupancy and boundaries. The agent can also know whether it is carrying food, has picked up or delivered food, or was blocked.</p>
+    <p>The policy does <strong>not</strong> receive global coordinates, the global food map, agent identity, attacker identity, direct messages, privileged labels or a global-state critic. All policies use one parameter-shared PPO model with a 32×32 network and a shared delivery reward.</p>
+  </section>
+
+  <section class="page">
+    <h2>3. The fair Phase 2A comparison</h2>
+    <p>For every seed, Phase 2A trains two separate models. This is essential: masking pheromone after training would not be a fair no-pheromone baseline.</p>
+    <table>
+      <tr><th>Model</th><th>Input during both training and evaluation</th><th>Purpose</th></tr>
+      <tr><td>Full PPO</td><td>All 58 local values, including food and home pheromone.</td><td>The policy whose pheromone use we want to test.</td></tr>
+      <tr><td>No-pheromone PPO</td><td>The same 58-value shape, with exactly the 18 local food/home pheromone entries set to zero.</td><td>Tests whether pheromone adds value beyond food, nest, walls, nearby agents and own state.</td></tr>
+      <tr><td>Random action</td><td>No learned policy; legal actions sampled from a separate seeded RNG.</td><td>Checks that learned policies exceed chance behavior.</td></tr>
+    </table>
+    <p>The phase used three PPO training seeds—7, 17 and 27—and diagnostic map seeds 100–103. The predeclared gate was strict: full PPO must have higher <strong>stochastic mean delivered food</strong> than both no-pheromone PPO and random action on every one of the three seeds.</p>
+
+    <h2>4. Why earlier candidates did not pass</h2>
+    <table>
+      <tr><th>Candidate family</th><th>What was tested</th><th>What happened</th></tr>
+      <tr><td>A–C</td><td>Larger/repeated-retrieval eight-agent maps.</td><td>Mixed gains and losses across seeds.</td></tr>
+      <tr><td>D–E</td><td>Smaller maps with more repeated trips.</td><td>Closer results, but still at least one loss or tie.</td></tr>
+      <tr><td>F</td><td>Slower pheromone evaporation.</td><td>Trails became more visible, but full PPO still lost one seed.</td></tr>
+      <tr><td>G</td><td>Four agents, distant adjacent food cluster, 1,100-step horizon.</td><td>Won two seeds but tied at the 60-food maximum on seed 7.</td></tr>
+      <tr><td>H–I</td><td>Same scout-and-follow task with a 700-step deadline; then double training budget.</td><td>Full-input training became unstable; this direction was rejected.</td></tr>
+    </table>
+    <p>These are useful negative results. Keep them; they justify why Candidate J changes only one thing.</p>
+  </section>
+
+  <section class="page">
+    <h2>5. What Candidate J does</h2>
+    <p>Candidate J preserves Candidate G's stable scout-and-follow structure and increases only the food capacity. This removes the delivery ceiling that hid a speed advantage in Candidate G.</p>
+    <table>
+      <tr><th>Setting</th><th>Candidate J value</th><th>Why it matters</th></tr>
+      <tr><td>Grid</td><td>12×12</td><td>Small enough for CPU PPO, but with a meaningful search route.</td></tr>
+      <tr><td>Agents</td><td>4</td><td>Creates a scout-and-follow opportunity without an eight-agent search swarm.</td></tr>
+      <tr><td>Food layout</td><td>Two adjacent cells far from the nest; location varies by reset seed.</td><td>One scout can discover a distant source; fixed-location memorization is discouraged.</td></tr>
+      <tr><td>Food capacity</td><td>50 units per cell; 100 total</td><td>The only change from G. It avoids the earlier 60-unit delivery ceiling.</td></tr>
+      <tr><td>Horizon</td><td>1,100 steps</td><td>Retains the stable long version rather than H/I's failed short deadline.</td></tr>
+      <tr><td>Field settings</td><td>Deposit 1.0, cap 10.0, evaporation 0.02</td><td>Retains the previously tested slow-fading field.</td></tr>
+      <tr><td>Training</td><td>300,000 requested agent transitions per policy</td><td>Same PPO settings, modes and seeds as Candidate G.</td></tr>
+    </table>
+    <h3>Candidate J assumptions</h3>
+    <ol>
+      <li>A full policy that can use local pheromone should turn the scout's discovered route into better team delivery than a separately trained no-pheromone policy.</li>
+      <li>Candidate G's seed-7 tie was partly caused by both policies reaching the old 60-unit maximum, not proof that pheromone had no value.</li>
+      <li>Increasing capacity while keeping the long horizon tests that explanation more cleanly than changing rewards, network size or several environment settings at once.</li>
+      <li>Seed-varying food locations prevent a policy from relying only on one memorized route.</li>
+    </ol>
+    <p>A frozen-policy diagnostic supported the first assumption: masking only local pheromone changed Candidate G full-policy action distributions by total variation 0.272, 0.187 and 0.230 for seeds 7, 17 and 27, respectively. This shows input sensitivity, not causal proof by itself.</p>
+  </section>
+
+  <section class="page">
+    <h2>6. Candidate J result</h2>
+    <p>All six PPO jobs and three paired random-action references completed. The table shows stochastic means, which are the predeclared advancement metric.</p>
+    <table>
+      <tr><th class="num">Training seed</th><th class="num">Full PPO</th><th class="num">No-pheromone PPO</th><th class="num">Random</th><th class="num">Full − no-pheromone</th><th>Gate outcome</th></tr>
+      <tr><td class="num">7</td><td class="num">100.00</td><td class="num">68.75</td><td class="num">3.00</td><td class="num">+31.25</td><td>Pass</td></tr>
+      <tr><td class="num">17</td><td class="num">80.00</td><td class="num">63.50</td><td class="num">1.75</td><td class="num">+16.50</td><td>Pass</td></tr>
+      <tr><td class="num">27</td><td class="num">100.00</td><td class="num">80.50</td><td class="num">2.25</td><td class="num">+19.50</td><td>Pass</td></tr>
+    </table>
+    <div class="callout"><strong>Conclusion:</strong> Candidate J passed the three-seed stochastic development gate. It is now the clean learned-policy basis for Phase 2B.</div>
+    <p>There is an important limitation: deterministic diagnostics were mixed. Full PPO delivered 100.00, 0.00 and 60.00 deterministically for seeds 7, 17 and 27. Keep the Phase 2B clean and attacked evaluations stochastic unless a separately specified deterministic analysis is needed.</p>
+    <p>The runner also preserved an interrupted first invocation and resumed safely into fresh <code>-resume-1</code> paths. Nothing was overwritten. The final root manifest has six completed PPO rows, three random rows, three paired rows and a true gate.</p>
+
+    <h2>7. Where the evidence is saved</h2>
+    <ul>
+      <li><code>artifacts/phase2a/scout-follow-capacity-run-001/paired.csv</code> — final same-seed comparisons.</li>
+      <li><code>artifacts/phase2a/scout-follow-capacity-run-001/runs.csv</code> — all PPO and random metrics.</li>
+      <li><code>artifacts/phase2a/scout-follow-capacity-run-001/manifest.json</code> — plan, provenance and resume record.</li>
+      <li><code>configs/phase2a/env/candidate_j_12x12_scout_follow_capacity.json</code> — Candidate J environment.</li>
+      <li><code>configs/phase2a/calibration-scout-follow-capacity.json</code> — declared Phase 2A matrix and gate.</li>
+      <li><code>docs/decisions/0012-phase2a-scout-follow-capacity.md</code> — decision, rationale and limitations.</li>
+    </ul>
+  </section>
+
+  <section class="page">
+    <h2>8. How to start Phase 2B</h2>
+    <p>Phase 2B should test whether a bounded minority false-food pheromone attack harms the useful Candidate J behavior, then whether a local defense helps. Do not jump directly to a large dataset: first freeze a small, auditable attack-calibration protocol.</p>
+    <div class="next"><strong>Recommended first deliverable:</strong> write a Phase 2B decision record before changing code or producing trajectories. It should name the Candidate J checkpoints, development maps, attacker fraction, injection budget, attack modes, clean/injection-disabled/attacked controls, metrics, and grouped train/validation/test split rules.</div>
+    <h3>Phase 2B sequence</h3>
+    <ol>
+      <li><strong>Freeze the clean reference.</strong> Use Candidate J’s completed full PPO checkpoints unchanged. Do not retrain them after seeing attack results.</li>
+      <li><strong>Declare attack calibration.</strong> Start with the existing bounded, nonnegative false-food injector. Deposits must occur only at selected attackers’ actual occupied cells and use the same field cap and evaporation as honest deposits.</li>
+      <li><strong>Run three controls on the same maps.</strong> Compare clean, injection-disabled and attacked conditions. Injection-disabled separates pheromone effects from simply losing productive workers.</li>
+      <li><strong>Measure attack effect first.</strong> Report honest/team food delivered, completion, episode length, requested/authorized/applied injected mass, compromised-agent fraction and stochastic seed variation.</li>
+      <li><strong>Create grouped splits before windows.</strong> Keep all variants from one complete map/episode group in the same split before generating temporal detector windows. Hold out maps and at least one attack configuration for final evaluation.</li>
+      <li><strong>Evaluate defenses fairly.</strong> Compare undefended pheromone coordination, separately trained no-pheromone PPO, the local timeout baseline and a documented cautionary-pheromone adaptation. Defense inputs may use only local pheromone change, revisitation and the agent's own progress.</li>
+      <li><strong>Keep final claims separate.</strong> Development calibration selects the protocol; held-out maps and attack settings support the final robustness claim.</li>
+    </ol>
+    <div class="caution"><strong>Non-negotiable boundaries:</strong> no pheromone erasure, negative deposits, global field writes, reward tampering, policy modification, attacker identities, global food locations, direct communication or privileged labels as defense inputs.</div>
+  </section>
+
+  <section class="page">
+    <h2>9. Useful commands and checks</h2>
+    <p>Use the pinned Phase 2A environment from the repository root. Every output directory must be new.</p>
+    <h3>Run the test suite</h3>
+    <p><code>./.venv-phase2a/bin/python -m pytest -q</code></p>
+    <p>The verified post-Candidate-J result is <strong>107 passed</strong>.</p>
+    <h3>Reproduce Candidate J in a new directory</h3>
+    <p><code>./.venv-phase2a/bin/python -m stigmergy.cli phase2a-calibrate --plan configs/phase2a/calibration-scout-follow-capacity.json --output artifacts/phase2a/candidate-j-reproduction-001</code></p>
+    <p>If that exact new run is interrupted, resume only it with the same plan and output:</p>
+    <p><code>./.venv-phase2a/bin/python -m stigmergy.cli phase2a-calibrate --plan configs/phase2a/calibration-scout-follow-capacity.json --output artifacts/phase2a/candidate-j-reproduction-001 --resume</code></p>
+    <h3>Read before implementing Phase 2B</h3>
+    <ul>
+      <li><code>AGENTS.md</code> — repository rules and research boundaries.</li>
+      <li><code>docs/CONTEXT.md</code> — current verified status.</li>
+      <li><code>docs/decisions/0012-phase2a-scout-follow-capacity.md</code> — Candidate J evidence.</li>
+      <li><code>src/stigmergy/attacks.py</code> and <code>src/stigmergy/trajectories.py</code> — existing bounded persistent-attack/provenance foundation.</li>
+      <li><code>src/stigmergy/defense.py</code> — local-history and timeout foundation.</li>
+    </ul>
+    <h2>10. Final handoff statement</h2>
+    <p>We now have a clean, reproducible stochastic result showing that pheromone information helps the learned team in Candidate J. The correct next move is not to change Candidate J again. Freeze it, define Phase 2B’s attack-calibration contract, then test whether bounded false pheromone can damage this useful coordination and whether strictly local defenses can recover it.</p>
+    <p class="footer">Prepared from the checked Candidate J artifacts, decision record and verified test suite. This document is a project handoff, not a final research result.</p>
+  </section>
+</body>
+</html>

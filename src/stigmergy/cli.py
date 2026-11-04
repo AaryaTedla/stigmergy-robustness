@@ -26,6 +26,12 @@ matrix, stores every PPO result and a common random baseline, and never chooses
 a winner automatically. ``compare-development`` adds six matched clean/control/attack/timeout variants,
 local-history logs and static plots using a completed frozen PPO checkpoint.
 It accepts only declared development maps, and is not final held-out evaluation.
+``phase2b-build-corpus`` packages already completed Phase 2B calibration
+artifacts into separate local-observation and simulator-audit files. It is a
+development-only archive, not detector fitting, a train/test split or a final
+research dataset. ``phase2b-export-agent-steps`` derives a spreadsheet-friendly
+agent-step CSV from only the corpus's local files; it retains provenance for
+grouping but does not create labels, windows, splits or a learned model.
 """
 
 import argparse
@@ -178,6 +184,19 @@ def main():
     calibration.add_argument("--output", required=True)
     calibration.add_argument("--resume", action="store_true",
                              help="resume a plan-identical started/incomplete calibration directory")
+    phase2b = commands.add_parser("phase2b-calibrate",
+                                  help="run the frozen-policy Phase 2B persistent-attack calibration")
+    phase2b.add_argument("--plan", default="configs/phase2b/attack-calibration.json")
+    phase2b.add_argument("--output", required=True)
+    corpus = commands.add_parser("phase2b-build-corpus",
+                                 help="package completed Phase 2B calibrations into a development-only corpus")
+    corpus.add_argument("--plan", default="configs/phase2b/development-calibration-corpus.json")
+    corpus.add_argument("--output", required=True)
+    export = commands.add_parser("phase2b-export-agent-steps",
+                                 help="export local Phase 2B corpus records as an inspectable agent-step CSV")
+    export.add_argument("--corpus", required=True,
+                        help="completed phase2b-build-corpus output directory")
+    export.add_argument("--output", required=True)
     compare = commands.add_parser("compare-development", help="matched development PPO/timeout comparisons")
     compare.add_argument("--checkpoint", required=True)
     compare.add_argument("--attack-config", default="configs/attack/persistent-review.json")
@@ -197,6 +216,15 @@ def main():
     elif args.command == "phase2a-calibrate":
         from .calibration import run_phase2a_calibration
         print(json.dumps(run_phase2a_calibration(args.plan, args.output, resume=args.resume), indent=2))
+    elif args.command == "phase2b-calibrate":
+        from .phase2b import run_phase2b_attack_calibration
+        print(json.dumps(run_phase2b_attack_calibration(args.plan, args.output), indent=2))
+    elif args.command == "phase2b-build-corpus":
+        from .phase2b_corpus import build_phase2b_calibration_corpus
+        print(json.dumps(build_phase2b_calibration_corpus(args.plan, args.output), indent=2))
+    elif args.command == "phase2b-export-agent-steps":
+        from .phase2b_dataset import export_phase2b_agent_steps
+        print(json.dumps(export_phase2b_agent_steps(args.corpus, args.output), indent=2))
     else:
         from .evaluation import run_development_comparison
         print(json.dumps(run_development_comparison(args.checkpoint, args.attack_config,
