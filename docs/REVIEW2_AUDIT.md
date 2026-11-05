@@ -106,3 +106,19 @@ The learning guide source and renderer accompany this branch; final PDF checks
 are recorded in the documentation entry after generation. Preserve the older
 handbook and do not describe the wider research roadmap or 30+ paper expectation
 as complete. Pushes are authorized by the explicit Review 2 audit request.
+
+## Learning PDF verification
+
+`output/pdf/review2_implementation_learning_guide.pdf` has **12 searchable
+pages**, 12 bookmarks and 11 internal contents links. ReportLab measured every
+body block and title against its page frame. All twelve pages were rendered
+with Poppler at 110 dpi and visually inspected; clipped initial headings were
+shortened and the entire final render inspected again. Tables, diagrams, code,
+page numbers and source footers are readable. PyPDF verified page/bookmark/link
+counts and searchable text. The original handbook is unchanged.
+
+The PDF names source implementations `phase2a:0ec8349` and `phase-2b:0aa1219`;
+subsequent documentation commits do not alter those verified runtime sources.
+The source Markdown and `scripts/build_review2_learning_guide.py` permit rebuilds
+with explicit revision labels. ReportLab is document tooling, not a new runtime
+or training dependency. CLI help was checked against the documented commands.

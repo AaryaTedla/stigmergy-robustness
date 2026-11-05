@@ -76,6 +76,16 @@ These are agreed implementation requirements, not proof that code already exists
 
 ## Current verified repository state
 
+- Review 2 learning handoff, 2026-11-05: created a separate 12-page searchable
+  learning PDF with 12 bookmarks and 11 internal contents links. All pages
+  rendered and visually inspected; titles/tables/code fit their measured frames.
+  It records source code revisions phase2a `0ec8349` / phase-2b `0aa1219`,
+  distinguishes historical metrics from fresh checks, and covers mechanics,
+  PPO, calibration, logging/corpus/CSV boundaries, files, commands and review
+  explanations. The older handbook is preserved. Exact slide replacement text
+  and notes are prepared in REVIEW2_SLIDE_UPDATES.md; live Canva changes remain
+  pending because no browser/document session is available.
+
 - Review 2 Phase 2B validation audit, 2026-11-05: unmodified baseline 124 / final
   162 tests passed on pinned Linux Python 3.12.14, with dependency consistency.
   Inherited the independently verified Phase 2A validation correction. Corpus/

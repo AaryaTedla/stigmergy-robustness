@@ -4,6 +4,18 @@ This file records verified project changes. Planned work belongs in `docs/CONTEX
 
 ## Unreleased
 
+### Review 2 learning guide and slide handoff - 2026-11-05
+
+- Added a separately named 12-page searchable implementation learning PDF,
+  its Markdown source and documented renderer. Verified 12 bookmarks and
+  11 internal contents links; all twelve pages were rendered and inspected.
+  Preserved the older handbook and recorded the audited code revisions.
+- Prepared exact replacement content/speaker notes for the existing 22-slide
+  Canva design, including Phase 2B's recorded negative results and development
+  data work. No live Canva edit or current-deck verification was possible:
+  browser and connected document access remain unavailable.
+
+
 ### Review 2 Phase 2B data-validation correction - 2026-11-05
 
 - Inherited Phase 2A paired-setting/resume validation. Enforced complete unique

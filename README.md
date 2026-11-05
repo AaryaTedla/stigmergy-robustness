@@ -66,7 +66,8 @@ rollouts passed through repeated corpus and CSV exports with unchanged
 checkpoint bytes. Failure/interruption and fresh-output checks passed.
 
 See [the audit record](docs/REVIEW2_AUDIT.md), [decision 0017](docs/decisions/0017-review2-provenance-validation.md)
-and [the learning guide source](docs/REVIEW2_IMPLEMENTATION_GUIDE.md).
+and [the 12-page learning PDF](output/pdf/review2_implementation_learning_guide.pdf)
+and [its source](docs/REVIEW2_IMPLEMENTATION_GUIDE.md).
 The older handbook remains historical. New root manifests bind configuration/
 source bytes and immutable child artifacts; unverifiable legacy resumes require
 fresh output without modifying history. Original Candidate J checkpoints and
