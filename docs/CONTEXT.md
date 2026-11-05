@@ -76,6 +76,21 @@ These are agreed implementation requirements, not proof that code already exists
 
 ## Current verified repository state
 
+- Review 2 Phase 2B validation audit, 2026-11-05: unmodified baseline 124 / final
+  162 tests passed on pinned Linux Python 3.12.14, with dependency consistency.
+  Inherited the independently verified Phase 2A validation correction. Corpus/
+  export now reject missing/duplicate scenario families, inconsistent map/seed/
+  split provenance, unknown local fields, non-finite numeric inputs/rewards,
+  invalid actions and non-Boolean outcomes. A tiny genuine frozen PPO triplet
+  passed repeated calibration -> corpus -> CSV integration; checkpoint bytes
+  stayed unchanged. Repeated outputs, existing-directory refusal and failed/
+  incomplete status checks passed. No environment, PPO, attack settings,
+  partitions, label/detector or evaluation behavior changed. Original J/corpus
+  artifacts remain unavailable here; 108 episodes / 36 groups / 412,016 rows
+  and negative calibration losses remain previously recorded, not rerun.
+  See REVIEW2_AUDIT.md and decision 0017. Canva access is unavailable; prepared
+  slide updates are not a saved Canva edit.
+
 - Review 2 validation audit, 2026-11-05: Phase 2A branch baseline 107 tests;
   final 116 tests on pinned Linux Python 3.12.14. Enforced identical paired
   settings/maps, bound new root manifests to config/source bytes, and validated

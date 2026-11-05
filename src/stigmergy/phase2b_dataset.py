@@ -24,7 +24,9 @@ visible in code review. In particular, the exporter never opens the corpus
 ``audit`` tree, so attacker identities, attack events, mass and global delivery
 accounting cannot enter the tabular CSV. The output remains a development-only
 data view: it is useful for inspection and loader prototyping, but cannot
-support a held-out detector or robustness claim.
+support a held-out detector or robustness claim. Complete group/split provenance,
+strict local fields, finite numeric values, valid actions and Boolean outcomes
+are checked before any malformed row can become completed export evidence.
 """
 
 import csv
@@ -33,15 +35,12 @@ import json
 from pathlib import Path
 
 from .defense import FEATURE_NAMES
-from .phase2b_corpus import FORBIDDEN_MODEL_KEYS, PLAN_PURPOSE
+from .phase2b_corpus import (FORBIDDEN_MODEL_KEYS, PLAN_PURPOSE, SCENARIOS,
+                             GROUP_PROVENANCE, validate_group, validate_local_record)
 
 
 FORMAT_VERSION = 1
 OBSERVATION_WIDTH = 58
-LOCAL_REQUIRED_KEYS = frozenset({
-    "observations_before", "features", "proposed_actions", "executed_actions",
-    "rewards", "terminations", "truncations", "infos", "timeout_active",
-})
 PROVENANCE_COLUMNS = (
     "calibration_id", "corpus_group_id", "scenario", "split", "training_seed",
     "map_seed", "action_seed", "action_mode", "agent_id", "step",
@@ -113,16 +112,6 @@ def _resolve_inside(root, relative, label):
     return path
 
 
-def _contains_forbidden_key(value):
-    """Return whether a purported local record contains audit-only metadata."""
-    if isinstance(value, dict):
-        return any(key in FORBIDDEN_MODEL_KEYS or _contains_forbidden_key(item)
-                   for key, item in value.items())
-    if isinstance(value, list):
-        return any(_contains_forbidden_key(item) for item in value)
-    return False
-
-
 def _validate_corpus(corpus):
     """Check the completed corpus manifest and return its stable episode index."""
     manifest = _read_json(corpus / "manifest.json", "corpus manifest")
@@ -130,51 +119,54 @@ def _validate_corpus(corpus):
             manifest.get("purpose") != PLAN_PURPOSE or not manifest.get("development_only")):
         raise ValueError("input must be a completed development-only Phase 2B corpus")
     index = _read_jsonl(corpus / "audit_index.jsonl", "corpus audit index")
-    group_ids = {group.get("corpus_group_id") for group in manifest.get("groups", [])
-                 if isinstance(group, dict)}
-    if not group_ids:
+    groups = manifest.get("groups")
+    if not isinstance(groups, list) or not groups:
         raise ValueError("corpus manifest has no groups")
+    by_id = {}
+    for group in groups:
+        validate_group(group, "corpus_group_id")
+        key = group["corpus_group_id"]
+        if key in by_id:
+            raise ValueError("corpus manifest has duplicate groups")
+        by_id[key] = group
+    splits_path = corpus / "group_splits.json"
+    splits = _read_json(splits_path, "corpus group split manifest")
+    if splits.get("assignments") != groups:
+        raise ValueError("corpus manifest and split provenance disagree")
+    expected_hash = manifest.get("group_split_manifest_sha256")
+    if expected_hash is not None and expected_hash != _sha256_file(splits_path):
+        raise ValueError("corpus group split manifest hash changed")
     seen = set()
     for entry in index:
         key = (entry.get("corpus_group_id"), entry.get("scenario"))
-        if (key[0] not in group_ids or key in seen or entry.get("split") != "development" or
-                not isinstance(entry.get("step_count"), int) or entry["step_count"] < 1):
+        group = by_id.get(key[0])
+        if (group is None or key in seen or key[1] not in SCENARIOS or
+                any(entry.get(name) != group.get(name) for name in GROUP_PROVENANCE + ("calibration_id",)) or
+                isinstance(entry.get("step_count"), bool) or not isinstance(entry.get("step_count"), int) or
+                entry["step_count"] < 1):
             raise ValueError("corpus audit index has invalid or duplicate episode provenance")
         seen.add(key)
+        # Reading local records must never be redirected into the privileged audit tree.
+        relative = entry.get("model_observable_steps")
+        if not isinstance(relative, str) or not Path(relative).parts or Path(relative).parts[0] != "model_observable":
+            raise ValueError("model_observable_steps must reference the local tree")
+        path = _resolve_inside(corpus, relative, "model_observable_steps")
+        if not path.resolve().is_relative_to((corpus / "model_observable").resolve()):
+            raise ValueError("model_observable_steps must reference the local tree")
+    if seen != {(group_id, scenario) for group_id in by_id for scenario in SCENARIOS}:
+        raise ValueError("corpus requires complete clean/disabled/attacked scenario families")
     return manifest, index
 
 
 def _agent_ids(local, path):
-    """Validate shared agent keys across one local transition record."""
-    if not isinstance(local, dict) or not LOCAL_REQUIRED_KEYS <= set(local):
-        raise ValueError(f"local record has missing required fields: {path}")
-    if _contains_forbidden_key(local):
-        raise ValueError(f"local record leaks simulator-only metadata: {path}")
-    observations = local["observations_before"]
-    if not isinstance(observations, dict) or not observations:
-        raise ValueError(f"local observations must identify at least one agent: {path}")
-    agents = tuple(sorted(observations))
-    if not all(isinstance(agent, str) for agent in agents):
-        raise ValueError(f"local agent IDs must be strings: {path}")
-    for key in LOCAL_REQUIRED_KEYS:
-        value = local[key]
-        if not isinstance(value, dict) or set(value) != set(agents):
-            raise ValueError(f"local field {key} does not match agent IDs: {path}")
-    return agents
+    """Validate finite local inputs, actions and typed outcomes before CSV flattening."""
+    return validate_local_record(local, path)
 
 
 def _agent_row(entry, step, local, agent, path):
-    """Flatten one agent's allowed local state and local transition outcomes."""
+    """Flatten one already validated local agent record into the declared CSV columns."""
     observation, features = local["observations_before"][agent], local["features"][agent]
-    if (not isinstance(observation, list) or len(observation) != OBSERVATION_WIDTH or
-            not all(isinstance(value, (int, float)) and not isinstance(value, bool) for value in observation)):
-        raise ValueError(f"agent observation must contain {OBSERVATION_WIDTH} numeric values: {path}")
-    if (not isinstance(features, list) or len(features) != len(FEATURE_NAMES) or
-            not all(isinstance(value, (int, float)) and not isinstance(value, bool) for value in features)):
-        raise ValueError(f"agent history features must contain {len(FEATURE_NAMES)} numeric values: {path}")
     info = local["infos"][agent]
-    if not isinstance(info, dict) or set(info) != {"blocked", "picked_up", "delivered"}:
-        raise ValueError(f"agent local info fields are malformed: {path}")
     row = {column: entry[column] for column in PROVENANCE_COLUMNS[:-2]}
     row.update(agent_id=agent, step=step)
     row.update(zip(OBSERVATION_COLUMNS, observation))
@@ -249,11 +241,16 @@ def export_phase2b_agent_steps(corpus, output):
                 records = _read_jsonl(path, "model-observable step file")
                 if len(records) != entry["step_count"]:
                     raise ValueError(f"episode step count disagrees with its audit index: {path}")
+                episode_agents = None
                 for expected_step, record in enumerate(records, start=1):
                     if set(record) != {"step", "local"} or record["step"] != expected_step:
                         raise ValueError(f"model-observable steps are not sequential local records: {path}")
                     local = record["local"]
-                    for agent in _agent_ids(local, path):
+                    agents = _agent_ids(local, path)
+                    if episode_agents is not None and agents != episode_agents:
+                        raise ValueError("episode changed its agent population")
+                    episode_agents = agents
+                    for agent in agents:
                         writer.writerow(_agent_row(entry, expected_step, local, agent, path))
                         agent_steps += 1
                     environment_steps += 1

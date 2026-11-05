@@ -4,6 +4,21 @@ This file records verified project changes. Planned work belongs in `docs/CONTEX
 
 ## Unreleased
 
+### Review 2 Phase 2B data-validation correction - 2026-11-05
+
+- Inherited Phase 2A paired-setting/resume validation. Enforced complete unique
+  clean/disabled/attacked families and matching manifest/split/index provenance.
+  Local records now reject unknown/audit fields, non-finite values, malformed
+  shapes, invalid actions and non-Boolean outcomes before completed data status.
+- Pinned Python 3.12.14 baseline 124 / final 162 tests passed, with package
+  consistency. A tiny real frozen-PPO calibration passed repeated corpus/CSV
+  integration without modifying checkpoint bytes; failure/interruption status,
+  output immutability and repeatability passed. No J training matrix was rerun.
+- Historical negative attack findings and generated-data counts remain reported
+  evidence because their raw artifacts are absent from this checkout. No threat,
+  simulator/PPO settings, final splits, labels, detector or defense were added.
+
+
 ### Review 2 Phase 2A validation correction - 2026-11-05
 
 - Enforced equal full/no-pheromone settings and maps; current versioned pairs

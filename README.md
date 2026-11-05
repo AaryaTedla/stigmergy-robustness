@@ -57,14 +57,22 @@ Each output directory must be new. All agents use the same PPO actor/local value
 
 ## Review 2 validation audit
 
-The 2026-11-05 audit passed 116 tests on pinned Python 3.12.14 and a fresh
-4,096-transition checkpoint/update/reload smoke. Paired policy settings must
-match except observation mode. New root manifests bind configuration/source
-bytes and completed child artifacts. Resume rejects changed or missing evidence
-before rewriting anything; legacy roots without these hashes remain historical
-and need a fresh output directory. See [the audit record](docs/REVIEW2_AUDIT.md).
-The original Candidate J artifacts are unavailable in this checkout; their
-reported development results were not independently rerun.
+The 2026-11-05 pinned Python 3.12.14 audit passed **162 tests**, versus the
+unmodified Phase 2B baseline of 124. It includes the Phase 2A paired-config and
+resume correction (Phase 2A independently passed 116 versus baseline 107),
+strict local numeric/action/outcome validation, complete unique scenario
+families and consistent manifest/split/index provenance. Small real frozen-PPO
+rollouts passed through repeated corpus and CSV exports with unchanged
+checkpoint bytes. Failure/interruption and fresh-output checks passed.
+
+See [the audit record](docs/REVIEW2_AUDIT.md), [decision 0017](docs/decisions/0017-review2-provenance-validation.md)
+and [the learning guide source](docs/REVIEW2_IMPLEMENTATION_GUIDE.md).
+The older handbook remains historical. New root manifests bind configuration/
+source bytes and immutable child artifacts; unverifiable legacy resumes require
+fresh output without modifying history. Original Candidate J checkpoints and
+the complete generated corpus are absent here: their metrics remain previously
+recorded, not independently rerun. Prepared [slide replacements and notes](docs/REVIEW2_SLIDE_UPDATES.md)
+are separate from live Canva edits, which currently await browser access.
 
 ## Phase 2A calibration (completed; Candidate J passed the clean gate)
 

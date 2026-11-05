@@ -57,3 +57,11 @@ historical artifacts in the audit, context and changelog only after checks.
 Pinned Python 3.12.14 baseline 107 / final 116 tests passed; focused calibration
 checks 20 passed and a fresh 4096-transition update/reload smoke passed. See
 [the audit](../REVIEW2_AUDIT.md). Phase 2B checks are recorded on its branch.
+
+## Phase 2B verification
+
+Pinned Python 3.12.14 baseline 124 / final 162 tests and dependency consistency
+passed. A tiny real frozen-policy calibration/corpus/CSV integration passed
+repeatability and immutability checks; failed and interrupted writes retained
+explicit status. Historical Candidate J and full corpus artifacts remain absent.
+No full training matrix or new attack experiment was run. See REVIEW2_AUDIT.md.

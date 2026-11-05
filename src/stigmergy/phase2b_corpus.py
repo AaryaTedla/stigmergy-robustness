@@ -21,14 +21,20 @@ source calibration identifier plus an existing policy/map/action group ID, so
 identically named groups from different attack settings never collide. All
 three scenario variants stay in that same development group. Generated corpus
 files belong under ignored ``data/generated/``; this module, its plan and its
-tests are the versioned reproducibility contract.
+tests are the versioned reproducibility contract. Local records are checked
+against the documented fields, per-agent shapes and types before copying.
+Manifest and split provenance must agree exactly; no missing scenario, repeated
+group or malformed numeric value can acquire completed corpus status.
 """
 
 from dataclasses import asdict, dataclass
 import hashlib
 import json
+import math
 from pathlib import Path
 import re
+
+from .defense import FEATURE_NAMES
 
 
 PLAN_PURPOSE = "phase2b_development_calibration_corpus"
@@ -39,6 +45,75 @@ FORBIDDEN_MODEL_KEYS = frozenset({
     "compromised_count", "compromised_fraction", "requested_mass",
     "authorized_mass", "applied_mass", "honest_delivered", "total_delivered",
 })
+
+LOCAL_REQUIRED_KEYS = frozenset({
+    "observations_before", "features", "proposed_actions", "executed_actions",
+    "rewards", "terminations", "truncations", "infos", "timeout_active",
+})
+GROUP_PROVENANCE = ("training_seed", "map_seed", "action_seed", "action_mode", "split")
+
+
+def validate_local_record(local, path):
+    """Return stable agent IDs after enforcing the local trajectory contract.
+
+    Inputs are decoded JSON records: 58 finite observation values, 12 finite
+    history features, actions 0..4, finite shared reward and Boolean outcomes
+    per agent. observations_after is permitted as the existing optional local
+    outcome view; audit metadata and all other unknown fields are rejected.
+    Agent IDs route records but remain provenance, never detector features.
+    """
+    if not isinstance(local, dict):
+        raise ValueError(f"local record must be an object: {path}")
+    if _forbidden_keys(local):
+        raise ValueError(f"local record leaks simulator-only metadata; leaks simulator-only keys: {path}")
+    if not LOCAL_REQUIRED_KEYS <= set(local) or set(local) - LOCAL_REQUIRED_KEYS - {"observations_after"}:
+        raise ValueError(f"local record has missing or unknown fields: {path}")
+    observations = local["observations_before"]
+    if not isinstance(observations, dict) or not observations or not all(
+            isinstance(agent, str) and agent for agent in observations):
+        raise ValueError(f"local observations require nonempty string agent IDs: {path}")
+    agents = tuple(sorted(observations))
+    for name, values in local.items():
+        if not isinstance(values, dict) or set(values) != set(agents):
+            raise ValueError(f"local field {name} does not match agent IDs: {path}")
+    def finite(value):
+        return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    for agent in agents:
+        for name, width in (("observations_before", 58), ("observations_after", 58),
+                            ("features", len(FEATURE_NAMES))):
+            if name in local:
+                values = local[name][agent]
+                if not isinstance(values, list) or len(values) != width or not all(map(finite, values)):
+                    raise ValueError(f"{name} must contain {width} finite numeric values: {path}")
+        for name in ("proposed_actions", "executed_actions"):
+            value = local[name][agent]
+            if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value < 5:
+                raise ValueError(f"{name} must be an integer action 0..4: {path}")
+        if not finite(local["rewards"][agent]):
+            raise ValueError(f"reward must be finite numeric data: {path}")
+        for name in ("terminations", "truncations", "timeout_active"):
+            if not isinstance(local[name][agent], bool):
+                raise ValueError(f"{name} must contain Boolean outcomes: {path}")
+        info = local["infos"][agent]
+        if (not isinstance(info, dict) or set(info) != {"blocked", "picked_up", "delivered"} or
+                not all(isinstance(value, bool) for value in info.values())):
+            raise ValueError(f"infos must contain Boolean blocked/picked_up/delivered outcomes: {path}")
+    return agents
+
+
+def validate_group(group, id_key="group_id"):
+    """Reject incomplete families, unsafe IDs and malformed development provenance."""
+    if (not isinstance(group, dict) or not isinstance(group.get(id_key), str) or
+            not re.fullmatch(r"[A-Za-z0-9_-]+", group[id_key]) or
+            group.get("split") != "development" or group.get("action_mode") != "stochastic" or
+            not isinstance(group.get("scenarios"), (list, tuple)) or
+            tuple(group["scenarios"]) != SCENARIOS):
+        raise ValueError("source group is not one complete development family")
+    for name in ("training_seed", "map_seed", "action_seed"):
+        value = group.get(name)
+        if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value < 2**32:
+            raise ValueError("group provenance requires valid integer seeds")
+
 
 
 @dataclass(frozen=True)
@@ -162,18 +237,17 @@ def _load_source_groups(root, source):
     if len(assignment_by_id) != len(assignments):
         raise ValueError(f"source group assignments are duplicate or malformed: {source.calibration_id}")
     validated = []
+    seen = set()
     for group in groups:
-        if not isinstance(group, dict):
-            raise ValueError(f"source group is malformed: {source.calibration_id}")
-        group_id = group.get("group_id")
-        assigned = assignment_by_id.get(group_id)
-        if (not isinstance(group_id, str) or not isinstance(assigned, dict) or
-                group.get("split") != "development" or assigned.get("split") != "development" or
-                tuple(group.get("scenarios", ())) != SCENARIOS or
-                tuple(assigned.get("scenarios", ())) != SCENARIOS):
-            raise ValueError(f"source group is not one complete development family: {source.calibration_id}")
+        validate_group(group)
+        group_id = group["group_id"]
+        if group_id in seen:
+            raise ValueError("duplicate source group in manifest")
+        seen.add(group_id)
+        if assignment_by_id.get(group_id) != group:
+            raise ValueError(f"source manifest and split provenance disagree: {source.calibration_id}")
         validated.append(group)
-    if set(assignment_by_id) != {group["group_id"] for group in validated}:
+    if set(assignment_by_id) != seen:
         raise ValueError(f"source manifest and split assignments disagree: {source.calibration_id}")
     return run, manifest, validated
 
@@ -189,7 +263,10 @@ def _package_episode(run, source, group, scenario, output):
     metrics = episode.get("metrics")
     if not isinstance(metrics, dict) or metrics.get("scenario") != scenario or metrics.get("group_id") != group_id:
         raise ValueError(f"source episode metrics do not match its group: {source.calibration_id}/{group_id}/{scenario}")
+    if any(metrics.get(key) != group[key] for key in ("map_seed", "action_seed", "action_mode")):
+        raise ValueError("source episode provenance does not match its group")
     model_records, audit_records = [], []
+    episode_agents = None
     for expected_step, line in enumerate(steps_path.read_text(encoding="utf-8").splitlines(), start=1):
         try:
             record = json.loads(line)
@@ -203,6 +280,10 @@ def _package_episode(run, source, group, scenario, output):
         leaked = _forbidden_keys(local)
         if leaked:
             raise ValueError(f"source local record leaks simulator-only keys {sorted(leaked)}: {steps_path}")
+        agents = validate_local_record(local, steps_path)
+        if episode_agents is not None and agents != episode_agents:
+            raise ValueError("source episode changed its agent population")
+        episode_agents = agents
         model_records.append({"step": expected_step, "local": local})
         audit_records.append({"step": expected_step, "simulator_metadata": audit})
     if not model_records or metrics.get("steps") != len(model_records):

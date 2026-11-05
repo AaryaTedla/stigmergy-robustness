@@ -139,3 +139,32 @@ def test_phase2b_plan_rejects_noncontract_inputs(kwargs):
     """The public plan schema permits only reviewable development calibration inputs."""
     with pytest.raises(ValueError):
         Phase2BAttackCalibrationPlan(**kwargs)
+
+
+def test_frozen_rollout_to_corpus_to_csv_is_reproducible(phase2b_plan):
+    """Exercise genuine PPO control triplets through both data boundaries without retraining J."""
+    from stigmergy.phase2b_corpus import build_phase2b_calibration_corpus, PLAN_PURPOSE as CORPUS_PURPOSE
+    from stigmergy.phase2b_dataset import export_phase2b_agent_steps
+
+    root, plan = phase2b_plan
+    checkpoint = root / "checkpoints/full-seed-7/policy.zip"
+    before = checkpoint.read_bytes()
+    run = root / "artifacts/phase2b/integration"
+    first = run_phase2b_attack_calibration(plan, run)
+    second_run = root / "artifacts/phase2b/integration-repeat"
+    assert first == run_phase2b_attack_calibration(plan, second_run)
+    for name in ("episodes.csv", "contrasts.csv", "summary.json"):
+        assert (run / name).read_bytes() == (second_run / name).read_bytes()
+    assert checkpoint.read_bytes() == before
+    corpus_plan = root / "configs/phase2b/corpus.json"
+    _write_json(corpus_plan, {"format_version": 1, "purpose": CORPUS_PURPOSE,
+                           "sources": [{"calibration_id": "tiny_integration",
+                                        "run_path": "artifacts/phase2b/integration"}]})
+    corpora = [root / f"data/generated/corpus-{number}" for number in (1, 2)]
+    exports = [root / f"data/generated/export-{number}" for number in (1, 2)]
+    for corpus, output in zip(corpora, exports):
+        assert build_phase2b_calibration_corpus(corpus_plan, corpus)["episode_count"] == 3
+        summary = export_phase2b_agent_steps(corpus, output)
+        assert summary["group_count"] == 1 and summary["episode_count"] == 3
+        assert summary["agent_step_count"] == 4 * summary["environment_step_count"]
+    assert (exports[0] / "agent_steps.csv").read_bytes() == (exports[1] / "agent_steps.csv").read_bytes()

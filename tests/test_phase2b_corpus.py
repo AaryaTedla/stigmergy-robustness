@@ -35,11 +35,16 @@ def _make_source(root, scenarios=("clean", "injection_disabled", "attacked")):
         episode_dir = run / "episodes" / group["group_id"] / scenario
         _write_json(episode_dir / "episode.json", {"split": "development", "metrics": {
             "group_id": group["group_id"], "scenario": scenario, "steps": 1,
-            "local_record_sha256": "local-digest",
+            "local_record_sha256": "local-digest", "map_seed": 100, "action_seed": 7, "action_mode": "stochastic",
         }, "simulator_metadata": {"compromised_agents": ["agent_0"]}})
-        record = {"step": 1, "local": {"observations_before": {"agent_0": [0.0]},
-                  "observations_after": {"agent_0": [0.0]}, "executed_actions": {"agent_0": 0},
-                  "infos": {"agent_0": {"picked_up": False}}},
+        agent = "agent_0"
+        local = {"observations_before": {agent: [0.0] * 58}, "observations_after": {agent: [0.0] * 58},
+                 "features": {agent: [0.0] * 12}, "proposed_actions": {agent: 0},
+                 "executed_actions": {agent: 0}, "rewards": {agent: 0.0},
+                 "terminations": {agent: False}, "truncations": {agent: False},
+                 "timeout_active": {agent: False},
+                 "infos": {agent: {"blocked": False, "picked_up": False, "delivered": False}}}
+        record = {"step": 1, "local": local,
                   "simulator_metadata": {"attack_events": [], "honest_delivered": 0}}
         episode_dir.mkdir(parents=True, exist_ok=True)
         (episode_dir / "steps.jsonl").write_text(json.dumps(record) + "\n", encoding="utf-8")
@@ -101,3 +106,58 @@ def test_corpus_builder_rejects_simulator_metadata_in_a_local_source_record(tmp_
     plan = _write_plan(root)
     with pytest.raises(ValueError, match="leaks simulator-only keys"):
         build_phase2b_calibration_corpus(plan, root / "data" / "generated" / "must-not-exist")
+
+
+@pytest.mark.parametrize("change", ["duplicate", "map", "missing_assignment", "unsafe_id"])
+def test_corpus_rejects_conflicting_or_duplicate_group_provenance(tmp_path, change):
+    """Completion status cannot hide repeated groups or disagreement with split provenance."""
+    root = tmp_path / "project"; run = _make_source(root); plan = _write_plan(root)
+    path = run / "manifest.json"; manifest = json.loads(path.read_text())
+    split_path = run / "group_splits.json"; splits = json.loads(split_path.read_text())
+    if change == "duplicate": manifest["groups"].append(manifest["groups"][0].copy())
+    elif change == "map": splits["assignments"][0]["map_seed"] = 999
+    elif change == "missing_assignment": splits["assignments"] = []
+    else: manifest["groups"][0]["group_id"] = "../outside"
+    path.write_text(json.dumps(manifest)); split_path.write_text(json.dumps(splits))
+    output = root / "data/generated/must-fail"
+    with pytest.raises(ValueError): build_phase2b_calibration_corpus(plan, output)
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("field,value", [("features", float("inf")), ("executed_actions", 5),
+                                          ("terminations", "false"), ("unknown_audit", 1)])
+def test_corpus_rejects_malformed_local_values_and_retains_failed_manifest(tmp_path, field, value):
+    """The corpus boundary rejects the same invalid values as the tabular export."""
+    root = tmp_path / "project"; run = _make_source(root); plan = _write_plan(root)
+    path = next((run / "episodes").glob("*/clean/steps.jsonl")); record = json.loads(path.read_text())
+    if field == "features": record["local"][field]["agent_0"][0] = value
+    elif field == "unknown_audit": record["local"][field] = value
+    else: record["local"][field]["agent_0"] = value
+    path.write_text(json.dumps(record) + "\n"); output = root / "data/generated/must-fail"
+    with pytest.raises(ValueError): build_phase2b_calibration_corpus(plan, output)
+    assert json.loads((output / "manifest.json").read_text())["status"] == "failed"
+
+
+def test_corpus_repeated_builds_match_and_existing_directory_is_preserved(tmp_path):
+    """A valid source has deterministic outputs; a second write cannot replace the archive."""
+    root = tmp_path / "project"; _make_source(root); plan = _write_plan(root)
+    first, second = root / "data/generated/first", root / "data/generated/second"
+    assert build_phase2b_calibration_corpus(plan, first) == build_phase2b_calibration_corpus(plan, second)
+    files = [path.relative_to(first) for path in first.rglob("*") if path.is_file()]
+    assert all((first / path).read_bytes() == (second / path).read_bytes() for path in files)
+    before = (first / "manifest.json").read_bytes()
+    with pytest.raises(FileExistsError): build_phase2b_calibration_corpus(plan, first)
+    assert (first / "manifest.json").read_bytes() == before
+
+
+def test_corpus_interruption_preserves_incomplete_manifest(tmp_path, monkeypatch):
+    """An interrupted write is retained as incomplete evidence and cannot look completed."""
+    import stigmergy.phase2b_corpus as module
+    root = tmp_path / "project"; _make_source(root); plan = _write_plan(root)
+    def interrupted(*args):
+        """Model a user interrupt during packaging, without modifying source artifacts."""
+        raise KeyboardInterrupt
+    monkeypatch.setattr(module, "_package_episode", interrupted)
+    output = root / "data/generated/interrupted"
+    with pytest.raises(KeyboardInterrupt): build_phase2b_calibration_corpus(plan, output)
+    assert json.loads((output / "manifest.json").read_text())["status"] == "incomplete"
