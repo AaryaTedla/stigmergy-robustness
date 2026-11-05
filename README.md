@@ -72,8 +72,9 @@ The older handbook remains historical. New root manifests bind configuration/
 source bytes and immutable child artifacts; unverifiable legacy resumes require
 fresh output without modifying history. Original Candidate J checkpoints and
 the complete generated corpus are absent here: their metrics remain previously
-recorded, not independently rerun. Prepared [slide replacements and notes](docs/REVIEW2_SLIDE_UPDATES.md)
-are separate from live Canva edits, which currently await browser access.
+recorded, not independently rerun. The [slide update record and speaking notes](docs/REVIEW2_SLIDE_UPDATES.md)
+now document the same 22-slide Canva deck updated and checked after reload on
+5 November 2026, including Phase 2B progress and the reading guide's PPO paper.
 
 ## Phase 2A calibration (completed; Candidate J passed the clean gate)
 

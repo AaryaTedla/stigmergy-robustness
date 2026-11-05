@@ -4,6 +4,17 @@ This file records verified project changes. Planned work belongs in `docs/CONTEX
 
 ## Unreleased
 
+### Review 2 live Canva presentation follow-through - 2026-11-05
+
+- Applied the prepared Phase 2B updates to the same 22-slide Canva design:
+  calibration losses, separated corpus/CSV counts and pending labels/detector
+  work; preserved recorded Candidate J results and original visual style.
+- Added the reading guide's original PPO paper, avoided seven duplicate
+  references and verified publication metadata. Kept the broader survey open.
+- Inspected all slides and verified nonempty speaking notes and edited content
+  after reload; fixed typography, diagram overlap and reference fit. Saved
+  verification screenshots locally. No runtime changes or new experiments.
+
 ### Review 2 learning guide and slide handoff - 2026-11-05
 
 - Added a separately named 12-page searchable implementation learning PDF,

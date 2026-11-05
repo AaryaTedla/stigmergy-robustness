@@ -109,6 +109,14 @@ as complete. Pushes are authorized by the explicit Review 2 audit request.
 
 ## Learning PDF verification
 
+Presentation follow-through, 5 November 2026: access was later restored. The
+same 22-slide Canva deck was updated, visually checked and reloaded; all slide
+content and speaking notes persisted. Phase 2B implementation/results and the
+reading guide's original PPO reference are included. See
+`REVIEW2_SLIDE_UPDATES.md`. The earlier access limitation above describes the
+audit-time state, not the current presentation status. Runtime audit findings
+and all previously recorded research results remain unchanged.
+
 `output/pdf/review2_implementation_learning_guide.pdf` has **12 searchable
 pages**, 12 bookmarks and 11 internal contents links. ReportLab measured every
 body block and title against its page frame. All twelve pages were rendered

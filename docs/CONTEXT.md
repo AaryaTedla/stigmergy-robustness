@@ -76,6 +76,17 @@ These are agreed implementation requirements, not proof that code already exists
 
 ## Current verified repository state
 
+- Review 2 live presentation follow-through, 2026-11-05: browser access was
+  restored and the same 22-slide Canva design was updated with implemented
+  Phase 2B calibration/corpus/CSV, recorded negative losses and pending
+  detector/label/split work. Preserved Candidate J's recorded development
+  results, original branding and cover date. Added the reading guide's original
+  PPO paper (R17); its seven other recommendations already appeared. Corrected
+  verified publication metadata and retained the incomplete 30+ survey status.
+  All slides and nonempty speaking notes persisted after reload; inspected
+  native content and saved screenshots. See REVIEW2_SLIDE_UPDATES.md.
+  This presentation edit changed no runtime code/settings or experiment results.
+
 - Review 2 learning handoff, 2026-11-05: created a separate 12-page searchable
   learning PDF with 12 bookmarks and 11 internal contents links. All pages
   rendered and visually inspected; titles/tables/code fit their measured frames.
@@ -83,8 +94,8 @@ These are agreed implementation requirements, not proof that code already exists
   distinguishes historical metrics from fresh checks, and covers mechanics,
   PPO, calibration, logging/corpus/CSV boundaries, files, commands and review
   explanations. The older handbook is preserved. Exact slide replacement text
-  and notes are prepared in REVIEW2_SLIDE_UPDATES.md; live Canva changes remain
-  pending because no browser/document session is available.
+  and notes were initially prepared in REVIEW2_SLIDE_UPDATES.md; browser access
+  was unavailable at that audit. The later live edit is recorded above.
 
 - Review 2 Phase 2B validation audit, 2026-11-05: unmodified baseline 124 / final
   162 tests passed on pinned Linux Python 3.12.14, with dependency consistency.
@@ -98,8 +109,8 @@ These are agreed implementation requirements, not proof that code already exists
   partitions, label/detector or evaluation behavior changed. Original J/corpus
   artifacts remain unavailable here; 108 episodes / 36 groups / 412,016 rows
   and negative calibration losses remain previously recorded, not rerun.
-  See REVIEW2_AUDIT.md and decision 0017. Canva access is unavailable; prepared
-  slide updates are not a saved Canva edit.
+  See REVIEW2_AUDIT.md and decision 0017. Canva access was unavailable during
+  that audit; the subsequent saved presentation update is recorded above.
 
 - Review 2 validation audit, 2026-11-05: Phase 2A branch baseline 107 tests;
   final 116 tests on pinned Linux Python 3.12.14. Enforced identical paired

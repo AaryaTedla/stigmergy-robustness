@@ -1,8 +1,10 @@
 # Review 2 Canva updates and speaking notes
 
-Prepared 5 November 2026. **Not applied to Canva:** no browser or connected
-Canva/document session is available. This is replacement content for the last
-saved 22-slide deck, not a claim that the current live design was inspected.
+Prepared and applied 5 November 2026. Browser access was restored after the
+initial audit. The same 22-slide Canva design now includes the Phase 2B updates,
+polished native text/tables/diagram, and revised speaking notes. All 22 slides
+and their notes were checked after reloading the design to verify persistence.
+Screenshots and the captured verification record are in `output/review2/`.
 
 Design: https://www.canva.com/design/DAHZvTzceTU/oi6hDFDe_6nLpilrtBlSjw/edit
 
@@ -223,10 +225,31 @@ Fresh correction/evidence:
 - https://github.com/AaryaTedla/stigmergy-robustness/commit/0aa1219
 - https://github.com/AaryaTedla/stigmergy-robustness/blob/0aa1219/docs/REVIEW2_AUDIT.md
 
-## Final live-deck acceptance (pending access)
+## Literature follow-through from the attached reading guide
 
-Inspect all 22 slides after editing: original style, readable spacing, native
-editable tables/charts, correct signed values, J/attack populations separated,
-cover date/order/outline, sources/notes and saved state. Reopen the same design
-to verify persistence. Until that is done, this document is prepared content
-only and the existing Canva deck must not be called updated by this audit.
+The guide recommends eight papers. Seven already appeared as R1, R2, R3, R4,
+R8, R9 and R11. Added **R17**, J. Schulman et al., “Proximal Policy Optimization
+Algorithms,” arXiv:1707.06347 (2017), to slide 7 and the research references on
+slide 21. Its role is the learning method, not evidence of swarm robustness.
+Primary source: https://arxiv.org/abs/1707.06347 .
+
+Verified R11's publisher metadata: K. O. Aina and S. Ha, *Artificial Life and
+Robotics*, vol. 31, pp. 484–494 (2026), online publication 26 November 2025:
+https://doi.org/10.1007/s10015-025-01089-z . Retained the verified revised-2024
+arXiv citation for R9, rather than adopting the guide's unsupported 2025 label:
+https://arxiv.org/abs/2302.03322 . Full R14 and R17 citations are in slide 21's
+notes; software/data resources remain separate from research papers. The wider
+30+ relevant-paper survey is still incomplete.
+
+## Final live-deck acceptance (completed 5 November 2026)
+
+Inspected all 22 slides, including original branding, spacing, editable
+tables/chart/architecture, signed losses, separate J/attack populations,
+cover date/order/outline and sources/notes. Corrected mixed text formatting,
+diagram-arrow overlap and reference-table fit. Reopened the same design and
+verified every slide and nonempty speaker notes persisted. The chart retains
+all nine J values and labels its original runs as not independently rerun.
+Slide 17 includes the three negative losses and explicitly states that the
+measurements are recorded development results with no defense applied.
+The source revision used for implementation status is merged main `72c1ddf`.
+No simulator/policy changes or new experiment runs were made for this edit.
