@@ -4,6 +4,20 @@ This file records verified project changes. Planned work belongs in `docs/CONTEX
 
 ## Unreleased
 
+### Review 2 Phase 2A validation correction - 2026-11-05
+
+- Enforced equal full/no-pheromone settings and maps; current versioned pairs
+  remain unchanged. New roots bind referenced config/source bytes and completed
+  checkpoint/manifest/summary hashes. Resume rejects changed, malformed or
+  unverifiable cached evidence before modifying its root manifest. Historical
+  artifacts remain untouched; legacy roots without hashes require fresh output.
+- Pinned Python 3.12.14 baseline: 107 passed; final: 116 passed. Fresh
+  4,096-transition integration smoke passed finite/update/reload checks.
+  Two-agent diagnostics: deterministic 0 before/after, stochastic 1.75 to 4.00.
+  Original Candidate J results remain previously recorded, not rerun.
+- Added decision 0017 and the branch audit record; no simulator, PPO settings,
+  attack, split, detector or evaluation behavior changed.
+
 ### Phase 2A clean-gate advancement - 2026-11-01
 
 - Added the local-only frozen-policy action-sensitivity diagnostic and ran it

@@ -14,7 +14,7 @@ The project asks whether a lightweight defense based only on an agent's local ph
 
 ## Current status
 
-Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Shashannk's clean shared-PPO pipeline and local debugging controller now run with reproducible short development diagnostics; useful learning and pheromone reliance remain unverified. Rohan's attack/provenance foundation adds one bounded persistent false-food injector and paired fixture controls. Tusti's local history and timeout baseline are now integrated with matched PPO/attack development comparisons and plots; see [Tusti's walkthrough](docs/TUSTI_FIRST_REVIEW.md) for usage and the negative timeout result. Phase 2A's long scout-and-follow check was promising but tied one seed at the delivery ceiling; its shorter-deadline version stayed unstable even after doubling training time. Attack/detector data generation remains blocked. See [the calibration guide](docs/PHASE2A_CALIBRATION.md). Decoy/intermittent attacks, split trajectory datasets, and research comparisons remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
+Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Shashannk's clean shared-PPO pipeline and local debugging controller now run with reproducible short development diagnostics; useful learning and pheromone reliance remain unverified. Rohan's attack/provenance foundation adds one bounded persistent false-food injector and paired fixture controls. Tusti's local history and timeout baseline are now integrated with matched PPO/attack development comparisons and plots; see [Tusti's walkthrough](docs/TUSTI_FIRST_REVIEW.md) for usage and the negative timeout result. Candidate J subsequently passed the clean three-seed development gate; the earlier failed candidates remain historical evidence. This branch contains Phase 2A only; Phase 2B work is maintained on `phase-2b`. See [the calibration guide](docs/PHASE2A_CALIBRATION.md). Decoy/intermittent attacks, split trajectory datasets, and research comparisons remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
 
 ## Updated eight-agent review demo
 
@@ -55,6 +55,17 @@ See [Shashannk's walkthrough](docs/SHASHANNK_FIRST_REVIEW.md) for the code readi
 
 Each output directory must be new. All agents use the same PPO actor/local value network on the existing local observation. The smoke budget is 4096 agent transitions; `configs/policy/development.json` provides the planned 300000-transition budget. The pinned training stack was verified on Windows Python 3.12.10; the declared Python 3.11 target still requires a recheck. Full-stack checks passed 61 tests. Two smoke runs matched exactly; deterministic diagnostic deliveries remained zero. A short run is pipeline evidence and does not establish useful coordination or robustness.
 
+## Review 2 validation audit
+
+The 2026-11-05 audit passed 116 tests on pinned Python 3.12.14 and a fresh
+4,096-transition checkpoint/update/reload smoke. Paired policy settings must
+match except observation mode. New root manifests bind configuration/source
+bytes and completed child artifacts. Resume rejects changed or missing evidence
+before rewriting anything; legacy roots without these hashes remain historical
+and need a fresh output directory. See [the audit record](docs/REVIEW2_AUDIT.md).
+The original Candidate J artifacts are unavailable in this checkout; their
+reported development results were not independently rerun.
+
 ## Phase 2A calibration (completed; Candidate J passed the clean gate)
 
 The current eight-agent review checkpoint does not show beneficial pheromone use: clean and attacked delivery were equal, and a frozen-policy input ablation slightly improved sampled delivery. Before collecting attack or detector data, Phase 2A compares three larger/repeated-retrieval development environments and three PPO seeds against separately trained no-pheromone PPO baselines plus random actions. The baseline masks only food/home pheromone entries in copied policy batches during both training and evaluation; it does not alter simulator observations or mechanics.
@@ -73,7 +84,7 @@ preserved in place:
 python -m stigmergy.cli phase2a-calibrate --output artifacts/phase2a/calibration-run-001 --resume
 ```
 
-This command is implemented but not yet verified in the current workspace and does not select an environment automatically or generate the final dataset.
+The command is covered by the pinned audit suite; it does not select an environment automatically or generate the final dataset. The full historical training matrices were not rerun during this audit.
 
 ## Local-defense foundation
 

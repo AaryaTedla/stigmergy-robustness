@@ -11,8 +11,33 @@ import json
 import sys
 import types
 
+import pytest
+
 from stigmergy import GridConfig
-from stigmergy.calibration import _load_plan, evaluate_random_actions, run_phase2a_calibration
+from stigmergy.calibration import (_load_plan, evaluate_random_actions, run_phase2a_calibration,
+                                   _input_fingerprints, _artifact_fingerprints)
+
+
+def _write_completed_fixture(directory, grid, policy, summary):
+    """Write hashable mock evidence; bytes are not a usable learned checkpoint."""
+    (directory / "manifest.json").write_text(json.dumps({"status": "completed",
+        "grid_config": grid, "training_config": policy}))
+    (directory / "summary.json").write_text(json.dumps(summary))
+    (directory / "policy.zip").write_bytes(b"mock checkpoint; orchestration test only")
+
+
+def _bind_existing_rows(output, root, rows):
+    """Attach immutable child evidence to explicitly mocked pre-completed rows."""
+    for row in rows:
+        directory = output / row["output"]
+        directory.mkdir(parents=True)
+        after = {mode: {"mean_delivered": row[f"{mode}_mean_delivered"],
+                 "episodes": [{"completed": False, "steps": 1.0}]}
+                 for mode in ("deterministic", "stochastic")}
+        summary = {"after": after, "actual_agent_transitions": row["actual_agent_transitions"]}
+        policy = json.loads((root / row["policy_config_path"]).read_text())
+        _write_completed_fixture(directory, row["grid_config"], policy, summary)
+        row["artifact_sha256"] = _artifact_fingerprints(directory)
 
 
 def test_repository_phase2a_plan_resolves_to_the_declared_eighteen_ppo_runs():
@@ -131,9 +156,12 @@ def test_calibration_runner_keeps_all_declared_mocked_training_rows(tmp_path, mo
         mode = json.loads(Path(policy_path).read_text())["observation_mode"]
         delivered = 100 if mode == "full" else 1
         episode = {"map_seed": 100, "steps": 1, "delivered": delivered, "completed": True}
-        return {"after": {"deterministic": {"mean_delivered": delivered, "episodes": [episode]},
+        summary = {"after": {"deterministic": {"mean_delivered": delivered, "episodes": [episode]},
                           "stochastic": {"mean_delivered": delivered, "episodes": [episode]}},
                 "actual_agent_transitions": 8}
+        _write_completed_fixture(Path(output), GridConfig(**json.loads(Path(grid_path).read_text())).__dict__,
+                                 json.loads(Path(policy_path).read_text()), summary)
+        return summary
 
     fake_module = types.ModuleType("stigmergy.training")
     fake_module.run_training = fake_training
@@ -187,10 +215,13 @@ def test_calibration_runner_resumes_only_missing_mocked_training_rows(tmp_path, 
                                   "deterministic_mean_steps": 1.0, "stochastic_mean_delivered": 2.0,
                                   "stochastic_completed_rate": 0.0, "stochastic_mean_steps": 1.0,
                                   "actual_agent_transitions": 8, "error": ""})
+    _bind_existing_rows(output, root, completed)
+    fingerprints = _input_fingerprints(root, candidates, source_plan, modes, seeds)
     plan_sha256 = __import__("hashlib").sha256(plan_path.read_bytes()).hexdigest()
     (output / "manifest.json").write_text(json.dumps({
         "status": "started", "purpose": source_plan["purpose"], "plan_sha256": plan_sha256,
         "ppo_run_count": 18, "random_baseline_count": 9, "runs": completed,
+        "input_sha256": fingerprints,
     }))
     partial = output / "candidate_c_16x16_dense" / "full-seed-7"
     partial.mkdir(parents=True)
@@ -202,9 +233,12 @@ def test_calibration_runner_resumes_only_missing_mocked_training_rows(tmp_path, 
         calls.append(Path(target))
         Path(target).mkdir(parents=True)
         episode = {"map_seed": 100, "steps": 1, "delivered": 3, "completed": False}
-        return {"after": {"deterministic": {"mean_delivered": 3, "episodes": [episode]},
+        summary = {"after": {"deterministic": {"mean_delivered": 3, "episodes": [episode]},
                           "stochastic": {"mean_delivered": 3, "episodes": [episode]}},
                 "actual_agent_transitions": 8}
+        _write_completed_fixture(Path(target), GridConfig(**json.loads(Path(grid_path).read_text())).__dict__,
+                                 json.loads(Path(policy_path).read_text()), summary)
+        return summary
 
     fake_module = types.ModuleType("stigmergy.training")
     fake_module.run_training = fake_training
@@ -253,10 +287,13 @@ def test_calibration_runner_rebuilds_derived_reports_after_final_aggregation_fai
                                   "deterministic_mean_steps": 1.0, "stochastic_mean_delivered": 2.0,
                                   "stochastic_completed_rate": 0.0, "stochastic_mean_steps": 1.0,
                                   "actual_agent_transitions": 8, "error": ""})
+    _bind_existing_rows(output, root, completed)
+    fingerprints = _input_fingerprints(root, candidates, source_plan, modes, seeds)
     plan_sha256 = __import__("hashlib").sha256(plan_path.read_bytes()).hexdigest()
     (output / "manifest.json").write_text(json.dumps({
         "status": "failed", "purpose": source_plan["purpose"], "plan_sha256": plan_sha256,
         "ppo_run_count": 18, "random_baseline_count": 9, "runs": completed,
+        "input_sha256": fingerprints,
         "error": "FileExistsError: derived report already exists",
     }))
     (output / "runs.csv").write_text("stale\n")
@@ -265,3 +302,83 @@ def test_calibration_runner_rebuilds_derived_reports_after_final_aggregation_fai
     assert summary["run_rows"] == 27 and summary["paired_rows"] == 9
     assert (output / "runs.csv").read_text() != "stale\n"
     assert json.loads((output / "manifest.json").read_text())["status"] == "completed"
+
+
+@pytest.fixture
+def copied_plan(tmp_path):
+    """Copy real versioned settings so malformed inputs do not edit the repository."""
+    project = Path(__file__).resolve().parents[1]
+    relative = "configs/phase2a/calibration-scout-follow-capacity.json"
+    plan = json.loads((project / relative).read_text())
+    root = tmp_path / "project"
+    paths = list(plan["environment_candidates"]) + [
+        plan["policy_config_template"].format(mode=mode, seed=seed)
+        for mode in plan["observation_modes"] for seed in plan["training_seeds"]]
+    for path in paths + [relative]:
+        target = root / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((project / path).read_bytes())
+    return root / relative
+
+
+@pytest.mark.parametrize("field,value", [("total_transitions", 123456),
+                                          ("diagnostic_map_seeds", [999]),
+                                          ("learning_rate", 0.001)])
+def test_calibration_rejects_unfair_policy_pairs(copied_plan, field, value):
+    """Budget, evaluation maps and optimizer settings cannot differ across paired modes."""
+    root = copied_plan.parents[2]
+    path = root / "configs/phase2a/policy/no_pheromone_seed_7.json"
+    config = json.loads(path.read_text()); config[field] = value
+    path.write_text(json.dumps(config))
+    with pytest.raises(ValueError, match="paired policy settings/maps"):
+        _load_plan(copied_plan)
+
+
+def _resume_fixture(plan_path, output):
+    """Create a resumable root with one mock completed job and fully bound inputs."""
+    plan, root, candidates, modes, seeds = _load_plan(plan_path)
+    candidate, grid_path, grid = candidates[0]
+    row = {"candidate_id": candidate, "training_seed": 7, "observation_mode": "full",
+           "grid_config": grid.__dict__, "grid_config_path": str(grid_path.relative_to(root)),
+           "policy_config_path": plan["policy_config_template"].format(mode="full", seed=7),
+           "output": f"{candidate}/full-seed-7", "status": "completed",
+           "actual_agent_transitions": 8, "error": ""}
+    for mode in ("deterministic", "stochastic"):
+        row.update({f"{mode}_mean_delivered": 2.0, f"{mode}_completed_rate": 0.0,
+                    f"{mode}_mean_steps": 1.0})
+    output.mkdir(); _bind_existing_rows(output, root, [row])
+    manifest = {"status": "incomplete", "purpose": plan["purpose"],
+                "plan_sha256": __import__("hashlib").sha256(plan_path.read_bytes()).hexdigest(),
+                "ppo_run_count": 6, "random_baseline_count": 3, "runs": [row],
+                "input_sha256": _input_fingerprints(root, candidates, plan, modes, seeds)}
+    (output / "manifest.json").write_text(json.dumps(manifest))
+    return manifest
+
+
+@pytest.mark.parametrize("change", ["grid", "policy", "checkpoint", "cached_metric", "unknown_row", "legacy"])
+def test_resume_rejects_changed_or_unverifiable_evidence_without_rewriting(copied_plan, tmp_path, change):
+    """A root-plan hash alone cannot authorize reuse of changed configurations or artifacts."""
+    output = tmp_path / "output"
+    manifest = _resume_fixture(copied_plan, output)
+    root = copied_plan.parents[2]
+    if change == "grid":
+        path = root / manifest["runs"][0]["grid_config_path"]
+        value = json.loads(path.read_text()); value["horizon"] += 1
+        path.write_text(json.dumps(value))
+    elif change == "policy":
+        for mode in ("full", "no_pheromone"):
+            path = root / f"configs/phase2a/policy/{mode}_seed_7.json"
+            value = json.loads(path.read_text()); value["total_transitions"] += 1
+            path.write_text(json.dumps(value))
+    elif change == "checkpoint":
+        (output / manifest["runs"][0]["output"] / "policy.zip").write_bytes(b"changed")
+    elif change == "cached_metric":
+        manifest["runs"][0]["stochastic_mean_delivered"] = 999
+    elif change == "unknown_row":
+        manifest["runs"][0]["training_seed"] = 999
+    else:
+        del manifest["input_sha256"]
+    path = output / "manifest.json"; path.write_text(json.dumps(manifest)); before = path.read_bytes()
+    with pytest.raises(ValueError, match="resume|Resume|completed PPO"):
+        run_phase2a_calibration(copied_plan, output, resume=True)
+    assert path.read_bytes() == before
