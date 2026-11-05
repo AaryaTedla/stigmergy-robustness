@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Phase 2A Explained: Local Values, Seeds, and Candidate J</title>
+  <style>
+    @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+    body { font-family: Arial, Helvetica, sans-serif; color: #17212b; font-size: 10.5pt; line-height: 1.45; }
+    h1 { color: #0a4b78; font-size: 23pt; margin: 0 0 5px; line-height: 1.15; }
+    h2 { color: #0a4b78; font-size: 16pt; margin: 24px 0 8px; border-bottom: 1px solid #b9d3e5; padding-bottom: 3px; }
+    h3 { color: #173f5f; font-size: 12.5pt; margin: 18px 0 5px; }
+    p { margin: 7px 0; }
+    ul, ol { margin: 6px 0 10px 24px; padding: 0; }
+    li { margin: 4px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 11px 0 15px; font-size: 9.3pt; }
+    th { background: #0a4b78; color: white; text-align: left; }
+    th, td { border: 1px solid #b8c6d1; padding: 6px; vertical-align: top; }
+    tr:nth-child(even) { background: #f4f8fb; }
+    .subtitle { font-size: 12pt; color: #51616e; margin-top: 0; }
+    .box { background: #eef7fc; border-left: 5px solid #2679ad; padding: 9px 12px; margin: 13px 0; }
+    .success { background: #eef8f0; border-left-color: #39864a; }
+    .warning { background: #fff8e8; border-left-color: #b87913; }
+    .mono { font-family: Consolas, monospace; background: #f0f2f4; padding: 1px 3px; }
+    .flow { text-align: center; font-weight: bold; color: #0a4b78; margin: 13px 0; }
+    .small { font-size: 8.5pt; color: #53616d; }
+    .page-break { page-break-before: always; }
+  </style>
+</head>
+<body>
+  <h1>Phase 2A Explained</h1>
+  <p class="subtitle">Local values, seeds, fair policy comparisons, and why Candidate J is the best current clean-task candidate</p>
+
+  <div class="box">
+    <strong>Short version.</strong> Phase 2A checks whether agents learn a useful benefit from <em>nearby pheromone information</em> before the project spends effort on attacks, detector data, or robustness evaluation. Candidate J is the best current candidate because it is the first tested setup where the full-input PPO policy beat both a separately trained no-pheromone PPO policy and random actions for all three experiment seeds.
+  </div>
+
+  <h2>1. The project in simple words</h2>
+  <p>Agents move in a grid, collect food, and carry it back to a nest. They can leave two kinds of pheromone-like values in the grid:</p>
+  <ul>
+    <li><strong>Food pheromone:</strong> deposited by an agent that is carrying food, so it can potentially indicate a route connected to food.</li>
+    <li><strong>Home pheromone:</strong> deposited by an empty agent travelling away from the nest, so it can potentially indicate the return direction or an explored route.</li>
+  </ul>
+  <p>The project uses one shared PPO neural-network policy for all agents. It must learn what to do from what each individual agent can see. The central clean-task question is therefore: <strong>does access to local pheromone values actually help that learned policy deliver more food?</strong></p>
+
+  <h2>2. What “local values” means</h2>
+  <p>Here, <strong>local</strong> does not mean a programming variable. It means information available close to one agent’s current grid position. An agent cannot see the whole world.</p>
+
+  <p>At every time step, one agent receives a 3 by 3 window centred on itself:</p>
+  <table>
+    <tr><th>Part of the observation</th><th>Values</th><th>Meaning</th></tr>
+    <tr><td>3 by 3 nearby cells</td><td>9 cells × 6 values = 54</td><td>The agent sees only itself, its immediate neighbours, and diagonal neighbours.</td></tr>
+    <tr><td>Own state</td><td>4 values</td><td>Whether it is carrying food, picked up food, delivered food, or was blocked on this step.</td></tr>
+    <tr><td><strong>Total</strong></td><td><strong>58 values</strong></td><td>This 58-number vector is the policy input for one agent.</td></tr>
+  </table>
+
+  <p>For each of the nine visible cells, the six local values are:</p>
+  <ol>
+    <li>Food present or not</li>
+    <li>Nest present or not</li>
+    <li>Normalised food-pheromone amount</li>
+    <li>Normalised home-pheromone amount</li>
+    <li>How occupied that cell is by agents</li>
+    <li>Whether the cell is outside the grid boundary</li>
+  </ol>
+
+  <div class="box">
+    <strong>Important limitation:</strong> the policy is not given absolute coordinates, the complete food map, a global pheromone map, agent identities, attacker identities, attack labels, or direct messages from other agents. It only receives a local 3 by 3 view and its own immediate progress state.
+  </div>
+
+  <h3>Why this matters</h3>
+  <p>If an agent turns toward stronger food pheromone after seeing it in a nearby cell, that is a local decision. It does not need—and is not allowed—to know where all food is globally. This is the intended decentralised coordination setting.</p>
+
+  <h2>3. What a seed is, using this experiment</h2>
+  <p>A <strong>seed</strong> is a fixed starting number for all controlled random choices. You can think of it as choosing a particular repeatable “randomness recipe.” It makes an experiment reproducible.</p>
+
+  <table>
+    <tr><th>With seed 7</th><th>With seed 17</th><th>With seed 27</th></tr>
+    <tr><td>The experiment uses one reproducible set of random choices.</td><td>It repeats the same method using a different reproducible set of random choices.</td><td>It repeats it a third time using another reproducible set.</td></tr>
+  </table>
+
+  <p>In this project, such controlled randomness can affect the seed-specific food layout, PPO neural-network initialisation, training/action sampling, and pickup contention order. The rules, model architecture, training budget, grid configuration, and evaluation method stay the same.</p>
+
+  <p>For each seed, the comparison is paired:</p>
+  <p class="flow">Seed 7: Full PPO versus No-Pheromone PPO versus Random<br>Seed 17: Full PPO versus No-Pheromone PPO versus Random<br>Seed 27: Full PPO versus No-Pheromone PPO versus Random</p>
+
+  <p>So it is reasonable to describe these as experiment repetitions 1, 2, and 3. The actual numbers 7, 17, and 27 have no special scientific meaning; they are just chosen reproducible identifiers. Repeating across seeds helps show that a result is not simply a lucky neural-network start or an unusually easy map.</p>
+
+  <div class="box warning">
+    <strong>Why one seed is not enough:</strong> if Full PPO wins only on seed 7, it could be luck. A strong Phase 2A result requires it to win for seeds 7, 17, and 27, under the predeclared rule.
+  </div>
+
+  <div class="page-break"></div>
+  <h2>4. Why Phase 2A was needed</h2>
+  <p>Before Phase 2A, the simulator and PPO training pipeline worked, but the available evidence did not show a reliable pheromone benefit. Clean and attacked development delivery were equal in the earlier review checkpoint; deterministic actions delivered zero; and a frozen-policy diagnostic that hid pheromone inputs slightly improved sampled delivery. Therefore, it would have been scientifically weak to immediately generate a large attack or detector dataset.</p>
+
+  <p>Phase 2A is a <strong>development-only gate</strong>. It asks one narrow question before later stages begin:</p>
+  <div class="box"><strong>Can a clean learned policy show a reproducible delivery advantage when it receives local pheromone values?</strong></div>
+
+  <p>It is not an attack experiment. It does not fit a detector, create final train/test splits, or prove robustness.</p>
+
+  <h2>5. The fair Phase 2A comparison</h2>
+  <p>Each environment candidate and seed has two <strong>independently trained</strong> PPO policies:</p>
+  <table>
+    <tr><th>Mode</th><th>Policy input</th><th>Purpose</th></tr>
+    <tr><td><strong>Full</strong></td><td>All 58 local values, including food and home pheromone values.</td><td>Tests the intended local-pheromone policy.</td></tr>
+    <tr><td><strong>No-pheromone</strong></td><td>Still has 58 positions, but the 18 pheromone entries are zero: 9 cells × 2 pheromone channels.</td><td>Tests how well the policy can do without pheromone information.</td></tr>
+    <tr><td><strong>Random</strong></td><td>No learned policy; actions are random.</td><td>Checks that both learned policies are meaningfully better than untrained movement.</td></tr>
+  </table>
+
+  <p>The no-pheromone baseline still sees food, the nest, occupancy, boundaries, and its own carrying/progress values. The simulator itself is not changed. Only a copied observation batch sent into the no-pheromone policy is masked.</p>
+
+  <p>This distinction is essential:</p>
+  <ul>
+    <li><strong>Not fair:</strong> train a full-input policy, then hide pheromones only after training. The policy is suddenly tested on unfamiliar input.</li>
+    <li><strong>Fair:</strong> train a separate policy from the start with pheromone entries zero, then evaluate it in the same way.</li>
+  </ul>
+
+  <h3>What remains the same in each matched pair</h3>
+  <p>Environment candidate, PPO architecture (shared 32-by-32 actor/local critic), reward, map sets, seed, training budget, diagnostic maps, and evaluation procedure. The intended difference is access to the 18 local pheromone values.</p>
+
+  <h2>6. How a candidate passes</h2>
+  <p>The predeclared condition is strict. On the stochastic mean delivered food metric, Full PPO must strictly beat:</p>
+  <ol>
+    <li>its same-seed separately trained no-pheromone PPO, and</li>
+    <li>the random-action reference,</li>
+  </ol>
+  <p>for <strong>every one</strong> of seeds 7, 17, and 27.</p>
+
+  <p>Stochastic evaluation means the policy samples actions from its learned action probabilities. Deterministic evaluation instead always selects the most likely action. Both are reported separately. The Phase 2A gate is based on stochastic delivery, and Candidate J’s deterministic results are explicitly recorded as mixed.</p>
+
+  <h2>7. Phase 2A journey: what was tried and learned</h2>
+  <table>
+    <tr><th>Candidate(s)</th><th>Question tested</th><th>Result</th><th>Decision</th></tr>
+    <tr><td>A, B, C</td><td>Would larger/repeated-retrieval environments make pheromones useful?</td><td>Some seeds improved, but no candidate won all three paired full-versus-no-pheromone comparisons.</td><td>Failed gate.</td></tr>
+    <tr><td>D, E</td><td>Would simpler maps and more repeat trips provide better trail-following opportunity?</td><td>Results were mixed across seeds.</td><td>Failed gate.</td></tr>
+    <tr><td>F</td><td>Were trails disappearing too quickly?</td><td>Slower evaporation made food trails visible more often, but Full PPO still lost on one seed.</td><td>Failed gate.</td></tr>
+    <tr><td>G</td><td>Would a distant, seed-varying food cluster create a clearer scout-and-follow task?</td><td>Full PPO tied at the maximum possible 60 deliveries for seed 7, then won seeds 17 and 27. It also finished faster.</td><td>Near result, but failed strict gate because a tie is not a win.</td></tr>
+    <tr><td>H, I</td><td>Could a shorter deadline reveal G’s speed advantage? Would more training stabilise it?</td><td>Shorter-horizon Full PPO training was unstable; doubling its training budget did not fix it.</td><td>Failed gate; do not repeat this direction.</td></tr>
+    <tr><td><strong>J</strong></td><td>Was G’s seed-7 tie caused by the 60-food delivery ceiling?</td><td>Only food capacity was increased, allowing delivery differences to appear.</td><td><strong>Passed all seeds.</strong></td></tr>
+  </table>
+
+  <div class="page-break"></div>
+  <h2>8. Candidate J: exact design</h2>
+  <p>Candidate J deliberately keeps the successful stable parts of Candidate G and changes only one factor. This is why it is a well-controlled follow-up rather than a completely new experiment.</p>
+  <table>
+    <tr><th>Feature</th><th>Candidate J setting</th><th>Why it matters</th></tr>
+    <tr><td>Grid</td><td>12 by 12</td><td>Retains the scout-and-follow environment.</td></tr>
+    <tr><td>Agents</td><td>4</td><td>Same as Candidate G.</td></tr>
+    <tr><td>Food layout</td><td>Two adjacent, distant food cells; location varies by map seed</td><td>A scout can find food and leave a trail that may help other agents follow.</td></tr>
+    <tr><td>Horizon</td><td>1,100 steps</td><td>Retains the long horizon that trained stably.</td></tr>
+    <tr><td>Pheromone evaporation</td><td>2% per step</td><td>Retains slower fading so local trails remain visible long enough to be potentially useful.</td></tr>
+    <tr><td>Food per patch</td><td><strong>50 units</strong> instead of Candidate G’s 30</td><td>The only environmental change; raises total capacity from 60 to 100 units.</td></tr>
+    <tr><td>Training</td><td>Three seeds × two PPO modes = six fresh PPO jobs, plus three random references</td><td>Preserves the paired comparison requirement.</td></tr>
+  </table>
+
+  <h3>Why changing food capacity was the right next test</h3>
+  <p>Candidate G’s full-input policy delivered the maximum 60 food units on all three seeds. On seed 7, no-pheromone PPO also reached 60. Therefore, the final delivery score could not show that Full PPO finished faster; both policies had hit the score ceiling.</p>
+
+  <p>Candidate J increased only the food capacity to 100 units total. This created room for a real difference in delivered food to appear. It did <strong>not</strong> add global information, direct communication, agent identities, reward shaping, attacks, detector features, or a new policy architecture.</p>
+
+  <h2>9. Candidate J results</h2>
+  <table>
+    <tr><th>Training seed</th><th>Full PPO stochastic mean delivery</th><th>No-pheromone PPO</th><th>Random actions</th><th>Full − No-pheromone</th><th>Full − Random</th></tr>
+    <tr><td>7</td><td>100.00</td><td>68.75</td><td>3.00</td><td><strong>+31.25</strong></td><td>+97.00</td></tr>
+    <tr><td>17</td><td>80.00</td><td>63.50</td><td>1.75</td><td><strong>+16.50</strong></td><td>+78.25</td></tr>
+    <tr><td>27</td><td>100.00</td><td>80.50</td><td>2.25</td><td><strong>+19.50</strong></td><td>+97.75</td></tr>
+  </table>
+
+  <div class="box success">
+    <strong>Why Candidate J is best:</strong> it is the first candidate with a positive Full-minus-No-Pheromone delivery difference on every required seed and a Full-over-Random win on every seed. It therefore satisfies the written Phase 2A advancement condition.
+  </div>
+
+  <h3>How to interpret those numbers</h3>
+  <p>For seed 7, the full-input model delivered 100 units on average while the separately trained no-pheromone model delivered 68.75. The difference is 100.00 − 68.75 = <strong>31.25 more food units</strong>. The same direction occurs for seeds 17 and 27. Because this repeats across all three seeds, the evidence is stronger than a one-run success.</p>
+
+  <h2>10. What Candidate J proves—and what it does not</h2>
+  <table>
+    <tr><th>Supported by Phase 2A</th><th>Not supported yet</th></tr>
+    <tr><td>In Candidate J’s clean development setting, access to local food/home pheromone values is associated with better stochastic delivery for the learned Full PPO policy than the fair no-pheromone baseline.</td><td>That the system is robust to a pheromone injection attack.</td></tr>
+    <tr><td>Candidate J is an appropriate clean learned-policy basis for planning Phase 2B.</td><td>That a detector works, a defense works, or a final attack dataset is valid.</td></tr>
+    <tr><td>The result is repeatable across the three declared training seeds in this development protocol.</td><td>That performance generalises to held-out maps or final experimental conditions.</td></tr>
+    <tr><td>The capacity ceiling explanation for Candidate G’s tie was worth testing and Candidate J resolved the gate.</td><td>That coordination is deterministic: Candidate J’s deterministic diagnostics were mixed.</td></tr>
+  </table>
+
+  <h2>11. Final takeaway</h2>
+  <p>Phase 2A was not simply “train a model and see a high score.” It was a controlled investigation:</p>
+  <ol>
+    <li>Use only decentralised, local observations.</li>
+    <li>Train a fair no-pheromone baseline from scratch.</li>
+    <li>Repeat with three reproducible seeds.</li>
+    <li>Compare against random actions too.</li>
+    <li>Keep failed and mixed results instead of hiding them.</li>
+    <li>Change one documented idea at a time.</li>
+  </ol>
+  <p>Candidate J is currently the strongest clean-policy candidate because it is the first one to pass every required paired stochastic comparison. This justifies Phase 2B planning, while keeping all attack, detector, robustness, and held-out-evaluation claims for later work.</p>
+
+  <h2>Sources in this repository</h2>
+  <p class="small">This explanation is based on: <span class="mono">docs/PHASE2A_CALIBRATION.md</span>; <span class="mono">docs/decisions/0012-phase2a-scout-follow-capacity.md</span>; <span class="mono">src/stigmergy/environment.py</span>; <span class="mono">src/stigmergy/observations.py</span>; and <span class="mono">artifacts/phase2a/scout-follow-capacity-run-001/{runs.csv, paired.csv}</span>. Generated 1 November 2026.</p>
+</body>
+</html>

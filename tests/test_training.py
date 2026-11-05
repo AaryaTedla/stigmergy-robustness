@@ -19,6 +19,7 @@ pytest.importorskip("stable_baselines3")
 from stable_baselines3 import PPO
 
 from stigmergy import GridConfig, ResourceRetrievalEnv
+from stigmergy.observations import PHEROMONE_INDICES
 from stigmergy.ppo_adapter import SharedGridVecEnv
 from stigmergy.training import TrainingConfig, run_training
 
@@ -36,6 +37,19 @@ def test_adapter_matches_direct_parallel_transitions():
         np.testing.assert_array_equal(got_rewards, list(rewards.values()))
         np.testing.assert_array_equal(done, [terms[a] or truncs[a] for a in obs])
         assert all(set(info) == {"picked_up", "delivered", "blocked", "TimeLimit.truncated"} for info in infos)
+
+
+def test_no_pheromone_adapter_masks_only_copied_policy_rows():
+    """Phase 2A's baseline never changes simulator-public observations."""
+    config = GridConfig(n_agents=2, horizon=4)
+    adapter = SharedGridVecEnv(config, [7], observation_mode="no_pheromone")
+    masked = adapter.reset()
+    direct, _ = ResourceRetrievalEnv(config).reset(seed=7)
+    expected = np.stack(list(direct.values()))
+    assert np.all(masked[:, PHEROMONE_INDICES] == 0)
+    retained = [index for index in range(58) if index not in PHEROMONE_INDICES]
+    np.testing.assert_array_equal(masked[:, retained], expected[:, retained])
+    np.testing.assert_array_equal(np.stack(list(adapter.world._observations().values())), expected)
 
 
 def test_timeout_preserves_final_observations_and_auto_resets_all_slots():
@@ -77,7 +91,8 @@ def test_map_schedule_and_invalid_batches():
 
 
 @pytest.mark.parametrize("kwargs", [{"seed": True}, {"n_steps": 1}, {"gamma": float("nan")},
-                                    {"diagnostic_map_seeds": [1]}, {"train_map_seeds": [1, 1]}])
+                                    {"observation_mode": "masked"}, {"diagnostic_map_seeds": [1]},
+                                    {"train_map_seeds": [1, 1]}])
 def test_invalid_training_configuration(kwargs):
     with pytest.raises(ValueError):
         TrainingConfig(**kwargs)

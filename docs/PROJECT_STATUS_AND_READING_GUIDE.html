@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Project Status and Reading Guide — 3 November 2026</title>
+  <style>
+    @page { size: A4; margin: 15mm 14mm 17mm; }
+    :root { --ink:#193044; --muted:#516575; --teal:#087c78; --pale:#edf6f5; --amber:#fff7e8; --line:#cbd9df; --red:#a33737; }
+    * { box-sizing:border-box; }
+    body { color:var(--ink); font:10.3pt/1.48 Arial, Helvetica, sans-serif; margin:0; }
+    h1,h2,h3 { color:var(--teal); line-height:1.18; margin:0 0 8px; }
+    h1 { font-size:27pt; letter-spacing:-.4px; }
+    h2 { font-size:16pt; margin-top:18px; padding-top:3px; border-top:2px solid #b9ded9; }
+    h3 { font-size:11.5pt; margin-top:13px; }
+    p { margin:0 0 9px; } ul,ol { margin:5px 0 10px 20px; padding:0; } li { margin:4px 0; }
+    a { color:#076c8c; overflow-wrap:anywhere; } strong { color:#143c50; }
+    code { font:8.7pt "DejaVu Sans Mono",Consolas,monospace; background:#eff4f6; padding:1px 3px; }
+    .cover { min-height:255mm; display:flex; flex-direction:column; justify-content:center; }
+    .eyebrow { color:var(--teal); font-weight:bold; text-transform:uppercase; letter-spacing:1.3px; margin-bottom:12px; }
+    .subtitle { color:var(--muted); font-size:15pt; max-width:600px; margin:9px 0 24px; }
+    .callout { background:var(--pale); border-left:5px solid var(--teal); padding:12px 14px; margin:12px 0; }
+    .warning { background:var(--amber); border-left-color:#d79328; }
+    .danger { background:#fff0f0; border-left-color:var(--red); }
+    .small { font-size:8.8pt; color:var(--muted); }
+    .page { page-break-before:always; }
+    .no-break { break-inside:avoid; }
+    table { width:100%; border-collapse:collapse; margin:9px 0 12px; font-size:9.2pt; }
+    th { background:#dcefed; color:#174d4c; text-align:left; } th,td { border:1px solid var(--line); padding:6px 7px; vertical-align:top; }
+    .status { font-weight:bold; white-space:nowrap; } .done { color:#087c78; } .partial { color:#9a5a00; } .todo { color:var(--red); }
+    .term { color:#0c6865; font-weight:bold; } .source { margin-top:16px; font-size:8.4pt; color:var(--muted); border-top:1px solid var(--line); padding-top:7px; }
+    .paper { break-inside:avoid; padding:10px 0; border-bottom:1px solid var(--line); }
+    .paper h3 { margin-top:0; } .tag { display:inline-block; border:1px solid #9bcac4; color:#174d4c; border-radius:10px; padding:1px 7px; margin-right:4px; font-size:8.4pt; }
+  </style>
+</head>
+<body>
+  <section class="cover">
+    <p class="eyebrow">Robust Stigmergic Coordination under Minority Pheromone Injection Attacks</p>
+    <h1>Project Status &amp; Reading Guide</h1>
+    <p class="subtitle">What the team has completed, what the results honestly mean, the papers to study next, and plain-English explanations of technical words.</p>
+    <div class="callout">
+      <strong>Short answer:</strong> the simulator, shared-PPO learning pipeline, bounded false-pheromone attack, local-history baseline, Phase 2A calibration, and leakage-safe development-data pipeline are implemented. Candidate J showed a clean <em>stochastic</em> pheromone benefit. But three persistent-attack calibrations did not show consistent loss in delivery. Therefore, the project has <strong>not yet</strong> demonstrated a reliable harmful attack, a trained detector, a successful defense, or final robustness on unseen conditions.
+    </div>
+    <p><strong>Report date:</strong> 3 November 2026 &nbsp;|&nbsp; <strong>Evidence:</strong> repository README, CONTEXT, decision records, changelog and tests.</p>
+    <p class="small">This report distinguishes verified development work from future research claims. It is about a simulated grid world; it does not claim hardware-robot validation.</p>
+  </section>
+
+  <section class="page">
+    <h2>1. The project in plain language</h2>
+    <p>Our agents work in a two-dimensional grid. They collect food and take it to a nest. They cannot send direct messages. Instead, they leave and sense shared food and home pheromone fields. This indirect coordination through changes in the environment is called <span class="term">stigmergy</span>.</p>
+    <div class="callout"><strong>Main question:</strong> Can agents learn to cooperate using local pheromone trails, and can a lightweight local defense reduce the harm caused by a small number of agents placing misleading food trails—without making normal clean-task performance much worse?</div>
+    <h3>Scope boundary</h3>
+    <ul>
+      <li>It is a reproducible simulation study, not a test with physical robots or real ants.</li>
+      <li>All learned-policy claims use one parameter-shared PPO policy; rule-based agents are only debugging/baseline tools.</li>
+      <li>The attacker may only add bounded, nonnegative false-food pheromone at the cell it really occupies. It cannot erase trails, alter rewards, change food locations or edit model weights.</li>
+      <li>A future defense must use only local sensing, local history and an agent’s own progress—not attacker IDs, global maps, or privileged labels.</li>
+    </ul>
+    <h3>The core system, in one simulator step</h3>
+    <ol>
+      <li>All agents choose an action; legal movement is applied at the same time.</li>
+      <li>An agent may pick up food or deliver it to the nest.</li>
+      <li>Honest agents deposit ordinary pheromone; in an attacked run, selected agents may add bounded false food pheromone at their current cell.</li>
+      <li>The pheromone fields are capped and then fade through evaporation.</li>
+      <li>Each agent receives its next local observation, reward and episode status.</li>
+    </ol>
+  </section>
+
+  <section class="page">
+    <h2>2. What has been completed so far</h2>
+    <table>
+      <tr><th>Component</th><th>Completed work</th><th>Status</th></tr>
+      <tr><td>Simulator</td><td>Tested PettingZoo parallel grid environment: movement, pickup/delivery, shared reward, bounded food/home fields, evaporation, seeded resets and scripted visual fixtures.</td><td class="status done">Verified</td></tr>
+      <tr><td>Local observations</td><td>58 values per agent: 3×3 local crop across six channels plus four own-state flags. No attacker identity, global map, attack time or injected mass is shown to the policy.</td><td class="status done">Verified</td></tr>
+      <tr><td>Learning</td><td>Shared PPO actor/local critic, smoke and development training, checkpoint reload checks and evaluation commands.</td><td class="status done">Verified pipeline</td></tr>
+      <tr><td>Attack/control design</td><td>Persistent, bounded, occupied-cell false-food injector with separate clean, injection-disabled and attacked scenarios.</td><td class="status done">Verified</td></tr>
+      <tr><td>Defense baseline</td><td>Twelve local-history features and a fixed timeout heuristic. The heuristic is not a learned detector.</td><td class="status done">Verified baseline</td></tr>
+      <tr><td>Phase 2A</td><td>Full-input PPO versus separately trained no-pheromone PPO and random-action reference, across three seeds.</td><td class="status done">Verified</td></tr>
+      <tr><td>Phase 2B data</td><td>Three matched attack calibrations, 108 development episodes in 36 intact groups, separate local/audit records, and a 412,016-row local agent-step CSV export.</td><td class="status done">Verified development data</td></tr>
+      <tr><td>Detector / robust defense</td><td>No fitted detector, no learned mitigation, no final train/validation/test split and no held-out robustness result.</td><td class="status todo">Not implemented</td></tr>
+    </table>
+    <h3>Important mechanics correction</h3>
+    <p>Empty agents moving outside the nest leave a home trail that weakens after each movement since their last nest visit. A stationary or blocked empty agent outside the nest deposits no home pheromone. This removed an earlier false hotspot that could grow simply because an agent waited at an exhausted food patch.</p>
+  </section>
+
+  <section class="page">
+    <h2>3. Results: what they mean and what they do not mean</h2>
+    <h3>Phase 2A: a clean pheromone-benefit gate was passed</h3>
+    <p>Before testing attacks, the project needed evidence that pheromone helps the learned policy in a clean task. Candidate J uses a 12×12 grid, four agents, two distant adjacent food cells, an 1,100-step horizon and slow 2% evaporation. Six fresh PPO runs (full/no-pheromone × seeds 7, 17, 27) plus three random references were completed.</p>
+    <table>
+      <tr><th>Training seed</th><th>Full PPO delivery</th><th>No-pheromone PPO</th><th>Full − no-pheromone</th><th>Full − random</th></tr>
+      <tr><td>7</td><td>100.00</td><td>68.75</td><td class="done"><strong>+31.25</strong></td><td>+97.00</td></tr>
+      <tr><td>17</td><td>80.00</td><td>63.50</td><td class="done"><strong>+16.50</strong></td><td>+78.25</td></tr>
+      <tr><td>27</td><td>100.00</td><td>80.50</td><td class="done"><strong>+19.50</strong></td><td>+97.75</td></tr>
+    </table>
+    <p><strong>Meaning:</strong> on this declared development task, local pheromone input improved stochastic performance. This is a necessary foundation for attack work, not final proof that every policy/general setting coordinates robustly through pheromone.</p>
+    <h3>Phase 2B: preserve the negative attack result</h3>
+    <p>Each policy/map pair was evaluated as a matched triplet: <strong>clean</strong>, <strong>injection disabled</strong> (the same agent is designated but deposits nothing) and <strong>attacked</strong>. The primary measure is:</p>
+    <div class="callout"><code>injection loss = honest delivery(disabled) − honest delivery(attacked)</code><br>A positive value means the injection reduced honest delivery. Zero or negative values do not support reliable disruption.</div>
+    <table>
+      <tr><th>Attack setting</th><th>Episodes</th><th>Mean paired injection loss</th><th>Honest interpretation</th></tr>
+      <tr><td>Immediate, 20-unit cap</td><td>36</td><td>−2.17</td><td>No consistent harmful loss.</td></tr>
+      <tr><td>Immediate, 200-unit cap</td><td>36</td><td>−0.42</td><td>Longer injection did not establish a delivery decline.</td></tr>
+      <tr><td>Delayed to transition 201, 200-unit cap</td><td>36</td><td>−2.25</td><td>Delaying also did not establish a delivery decline.</td></tr>
+    </table>
+    <div class="danger callout"><strong>Correct conclusion:</strong> these persistent false-pheromone settings were not shown to reliably harm Candidate J. Do not claim the attack is harmless in every situation; instead, declare a new bounded attack-calibration plan before training/tuning a detector or claiming defense success.</div>
+  </section>
+
+  <section class="page">
+    <h2>4. What should be done next</h2>
+    <ol>
+      <li>Write and approve a new bounded attack-calibration decision—e.g., a decoy or intermittent pattern—while keeping the occupied-cell, nonnegative and budgeted threat boundary.</li>
+      <li>Run matched clean, disabled and attacked development episodes and advance only if delivery degradation is reliable.</li>
+      <li>Freeze grouped train/validation/test map and attack splits <em>before</em> temporal windows are made. Related episodes must never be split across train and test.</li>
+      <li>Fit local-only detector candidates on training groups; choose model/threshold/mitigation once on validation data.</li>
+      <li>Compare undefended PPO, separately trained no-pheromone PPO, timeout baseline, cautionary-pheromone adaptation and the selected local detector/mitigation.</li>
+      <li>Run final evaluation on held-out maps and an attack configuration never used for design choices. Report clean cost, attack loss, recovery, false alarms, delay and training-seed variability.</li>
+    </ol>
+    <h3>Why this order matters</h3>
+    <p>A detector cannot honestly be called successful if it is trained/tuned on an attack that has not been shown to cause a meaningful task problem. Grouped data splits also prevent <span class="term">leakage</span>: nearly identical pieces of the same episode must not appear in both training and test sets.</p>
+  </section>
+
+  <section class="page">
+    <h2>5. Papers to read — recommended order</h2>
+    <p>Read the first five before writing the literature review. The last two provide implementation/real-swarm context. Each entry says exactly why it matters for this project.</p>
+    <div class="paper"><h3>1. Aswale et al. (2022), <em>Hacking the Colony: On the Disruptive Effect of Misleading Pheromone and How to Defend Against It</em></h3><span class="tag">Start here</span><span class="tag">Attack + mitigation</span><p>Closest conceptual anchor. It studies misleading food pheromone, minority disruptors and cautionary pheromone. Use it to explain what is already established, and why our project must not claim that false pheromone or cautionary trails are new.</p><p><a href="https://arxiv.org/abs/2202.01808">arXiv:2202.01808</a> · AAMAS 2022.</p></div>
+    <div class="paper"><h3>2. Xu et al. (2022), <em>Stigmergic Independent Reinforcement Learning for Multiagent Collaboration</em></h3><span class="tag">Core learning context</span><p>Explains how digital pheromone can act as indirect communication for learning agents. Compare its independent/federated learning setup with our parameter-shared PPO design; do not describe them as the same method.</p><p><a href="https://doi.org/10.1109/TNNLS.2021.3056418">DOI: 10.1109/TNNLS.2021.3056418</a>.</p></div>
+    <div class="paper"><h3>3. Schulman et al. (2017), <em>Proximal Policy Optimization Algorithms</em></h3><span class="tag">Method</span><p>The original PPO paper. Read the main objective/algorithm sections to explain why PPO is used and what a policy update means. It supports the RL method; it does not prove multi-agent robustness.</p><p><a href="https://arxiv.org/abs/1707.06347">arXiv:1707.06347</a>.</p></div>
+    <div class="paper"><h3>4. Aina &amp; Ha (2026), <em>Deep Reinforcement Learning for Multi-Agent Coordination</em></h3><span class="tag">Closest learned-stigmergy comparison</span><p>Studies virtual pheromones for decentralized coordination in a congested setting. Use it to compare task design, scaling and curriculum learning. Their learning method is not our PPO pipeline.</p><p><a href="https://doi.org/10.1007/s10015-025-01089-z">DOI: 10.1007/s10015-025-01089-z</a>.</p></div>
+    <div class="paper"><h3>5. Standen, Kim &amp; Szabo (2025), <em>Adversarial Machine Learning Attacks and Defences in Multi-Agent Reinforcement Learning</em></h3><span class="tag">Security framing</span><p>A MARL security survey that gives vocabulary for attack surfaces, execution-time attacks and defense trade-offs. Use it to position our environment-mediated false signal as an indirect malicious influence, not a direct edit of policy parameters.</p><p><a href="https://doi.org/10.1145/3708320">DOI: 10.1145/3708320</a>.</p></div>
+  </section>
+
+  <section class="page">
+    <h2>6. More useful papers and a reading plan</h2>
+    <div class="paper"><h3>6. Li et al. (2025), <em>Attacking Cooperative Multi-Agent Reinforcement Learning by Adversarial Minority Influence</em></h3><span class="tag">Attack comparison</span><p>Shows that a minority adversary can influence cooperative MARL through learned action-based attacks. It is useful for framing, but its attack is much stronger and different from our local, bounded pheromone-deposit attacker. Do not use it as evidence that our attack must work.</p><p><a href="https://arxiv.org/abs/2302.03322">arXiv:2302.03322</a>.</p></div>
+    <div class="paper"><h3>7. Hunt et al. (2019), <em>Testing the Limits of Pheromone Stigmergy in High-Density Robot Swarms</em></h3><span class="tag">Mechanics / limitations</span><p>Useful for understanding pheromone saturation, evaporation and congestion. It motivates why field dynamics must be measured rather than assumed beneficial at every agent density.</p><p><a href="https://doi.org/10.1098/rsos.190225">DOI: 10.1098/rsos.190225</a>.</p></div>
+    <div class="paper"><h3>8. Salman et al. (2020), <em>Phormica: Photochromic Pheromone Release and Detection System for Stigmergic Coordination in Robot Swarms</em></h3><span class="tag">Optional physical context</span><p>Physical swarm-robotics context for artificial pheromone. Read it to explain the inspiration, but clearly state that our current evidence is only simulation-based.</p><p><a href="https://doi.org/10.3389/frobt.2020.591402">DOI: 10.3389/frobt.2020.591402</a>.</p></div>
+    <h3>Two-meeting study plan</h3>
+    <table>
+      <tr><th>Meeting</th><th>Read</th><th>Questions to answer</th></tr>
+      <tr><td>1: problem and method</td><td>Papers 1–4</td><td>What is stigmergy? What does the attacker do? How does PPO learn? How is our setup different from each paper?</td></tr>
+      <tr><td>2: security and evaluation</td><td>Papers 5–8</td><td>What counts as a fair control? What information must remain hidden? Why test clean cost and unseen attacks? Why cannot physical-robot findings be claimed?</td></tr>
+    </table>
+  </section>
+
+  <section class="page">
+    <h2>7. Glossary: complex words in simple language</h2>
+    <table>
+      <tr><th>Word</th><th>Simple meaning here</th></tr>
+      <tr><td><strong>Stigmergy</strong></td><td>Indirect teamwork: one agent leaves an environmental trace and another later reacts to it.</td></tr>
+      <tr><td><strong>Pheromone field</strong></td><td>A grid of numbers representing the strength of recent trail deposits. It is not food, a distance, trust, or a probability.</td></tr>
+      <tr><td><strong>PPO</strong></td><td>Proximal Policy Optimization: a reinforcement-learning method that improves a neural-network action policy from trial-and-error experience.</td></tr>
+      <tr><td><strong>Parameter-shared</strong></td><td>All agents use the same learned network weights. They can still act differently because they see different local observations.</td></tr>
+      <tr><td><strong>Local observation</strong></td><td>The small patch of information one agent can see near itself, not the whole map.</td></tr>
+      <tr><td><strong>Stochastic action</strong></td><td>An action sampled from the policy’s probabilities. It can vary even in the same situation.</td></tr>
+      <tr><td><strong>Deterministic action</strong></td><td>Always selecting the policy’s highest-probability action.</td></tr>
+      <tr><td><strong>Calibration</strong></td><td>A controlled development check to see whether a setting produces the effect needed before building later work on it.</td></tr>
+      <tr><td><strong>Matched control</strong></td><td>A comparison run with the same model, seeds and settings, changing only the condition being tested.</td></tr>
+      <tr><td><strong>Injection-disabled</strong></td><td>A control where the same attacker-designated agent exists but deposits no false pheromone, separating injection effects from worker designation.</td></tr>
+      <tr><td><strong>Evaporation</strong></td><td>Old pheromone values gradually decrease every step, so trails fade.</td></tr>
+      <tr><td><strong>Held out</strong></td><td>Kept aside while designing the system, then used only for final testing.</td></tr>
+      <tr><td><strong>Data leakage</strong></td><td>Accidentally letting test information—or highly related samples—help training, giving an unrealistically good result.</td></tr>
+      <tr><td><strong>Temporal window</strong></td><td>A short sequence of consecutive time steps used as one detector input example.</td></tr>
+      <tr><td><strong>Checkpoint</strong></td><td>A saved copy of the learned model at a particular stage of training.</td></tr>
+      <tr><td><strong>Robustness</strong></td><td>How well the system keeps working when it faces difficult or malicious conditions it was not tuned for.</td></tr>
+    </table>
+    <h3>One-sentence conclusion</h3>
+    <div class="callout"><strong>The capstone is well beyond the idea stage:</strong> it has a tested simulator, trained-policy pipeline, fair clean pheromone evidence, controlled attacks and a carefully separated development dataset. The crucial next step is to find a legal, reliably harmful attack setting before claiming a detector or defense works.</div>
+    <p class="source"><strong>Project sources:</strong> README.md; docs/CONTEXT.md; CHANGELOG.md; PHASE2A_CALIBRATION.md; PHASE2B_DATASET_ROADMAP.md; decisions 0012–0016; CURRENT_PROJECT_PROGRESS_REPORT.html. <strong>External paper links:</strong> provided in Sections 5–6. Report generated on 3 November 2026.</p>
+  </section>
+</body>
+</html>

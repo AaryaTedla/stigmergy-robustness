@@ -1,0 +1,21 @@
+{
+  "format_version": 1,
+  "purpose": "development_only_phase2a_calibration",
+  "description": "Compare full local observations with separately trained no-pheromone PPO policies before generating attack or detector data.",
+  "environment_candidates": [
+    "configs/phase2a/env/candidate_a_12x12.json",
+    "configs/phase2a/env/candidate_b_16x16.json",
+    "configs/phase2a/env/candidate_c_16x16_dense.json"
+  ],
+  "observation_modes": ["full", "no_pheromone"],
+  "training_seeds": [7, 17, 27],
+  "policy_config_template": "configs/phase2a/policy/{mode}_seed_{seed}.json",
+  "selection_rule": "No automatic winner selection. Retain every completed and failed run. A candidate can advance only if full-input PPO exceeds its same-seed separately trained no-pheromone PPO and random baseline on declared development diagnostics across all three training seeds. Final maps, final attack settings, detector fitting, and held-out evaluation are out of scope.",
+  "required_reports": [
+    "per-training-seed stochastic and deterministic delivered-food means",
+    "full-minus-no-pheromone paired difference on the declared diagnostic maps",
+    "random-action baseline on the same diagnostic maps",
+    "completed-task rate and episode-length distribution",
+    "training/runtime provenance and all failed runs"
+  ]
+}

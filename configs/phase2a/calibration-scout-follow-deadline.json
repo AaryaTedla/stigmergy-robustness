@@ -1,0 +1,19 @@
+{
+  "format_version": 1,
+  "purpose": "development_only_phase2a_calibration",
+  "description": "Fresh time-limited validation of the scout-and-follow map: retain every Candidate G setting except a 700-step horizon, then run the same fair three-seed full/no-pheromone delivery comparison.",
+  "environment_candidates": [
+    "configs/phase2a/env/candidate_h_12x12_scout_follow_deadline.json"
+  ],
+  "observation_modes": ["full", "no_pheromone"],
+  "training_seeds": [7, 17, 27],
+  "policy_config_template": "configs/phase2a/policy/{mode}_seed_{seed}.json",
+  "selection_rule": "No automatic winner. Candidate H can move to team review only when full-input PPO beats its same-seed separately trained no-pheromone PPO and random action on seeds 7, 17 and 27. This remains development work; Phase 2B does not start from a single seed.",
+  "required_reports": [
+    "per-seed stochastic and deterministic food-delivery means",
+    "full-minus-no-pheromone paired differences",
+    "random-action reference on the same diagnostic maps",
+    "completed-task rate and episode length",
+    "training/runtime provenance and every failed run"
+  ]
+}

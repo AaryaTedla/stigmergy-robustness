@@ -1,0 +1,18 @@
+{
+  "format_version": 1,
+  "purpose": "phase2b_development_calibration_corpus",
+  "sources": [
+    {
+      "calibration_id": "persistent_20_immediate",
+      "run_path": "artifacts/phase2b/attack-calibration-run-001"
+    },
+    {
+      "calibration_id": "persistent_200_immediate",
+      "run_path": "artifacts/phase2b/attack-calibration-persistent-200-run-001"
+    },
+    {
+      "calibration_id": "persistent_200_delayed",
+      "run_path": "artifacts/phase2b/attack-calibration-persistent-delayed-200-run-001"
+    }
+  ]
+}

@@ -131,7 +131,7 @@ def _write_csv(path, rows):
 
 
 def rollout_comparison_episode(model, grid, attack_config, config, map_seed, action_seed,
-                               action_mode, scenario, output):
+                               action_mode, scenario, output, group_id=None):
     """Record one paired episode; simulator labels are used solely by the writer.
 
     Returns deterministic episode metrics and a separate elapsed-time record.
@@ -149,7 +149,11 @@ def rollout_comparison_episode(model, grid, attack_config, config, map_seed, act
     selected = set(world.attack_injector.compromised_agents) if world.attack_injector else set()
     output = Path(output)
     output.mkdir(parents=True, exist_ok=False)
-    group_id = f"map-{map_seed}_action-{action_seed}_{action_mode}"
+    # Phase 2B evaluates several frozen training checkpoints.  Its caller
+    # supplies a checkpoint-qualified group ID so every clean/control/attack
+    # family remains indivisible when later split manifests are made.  The
+    # original development comparison keeps its historical ID unchanged.
+    group_id = group_id or f"map-{map_seed}_action-{action_seed}_{action_mode}"
     count_deliveries = {a: 0 for a in observations}
     overrides = activations = 0
     local_digest = hashlib.sha256()

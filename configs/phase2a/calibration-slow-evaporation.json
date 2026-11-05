@@ -1,0 +1,20 @@
+{
+  "format_version": 1,
+  "purpose": "development_only_phase2a_calibration",
+  "description": "Keep the simple 12x12 repeat-trip task fixed while reducing pheromone evaporation from 0.10 to 0.02, then repeat the fair three-seed full/no-pheromone check before Phase 2B.",
+  "environment_candidates": [
+    "configs/phase2a/env/candidate_f_12x12_slow_evaporation.json"
+  ],
+  "observation_modes": ["full", "no_pheromone"],
+  "training_seeds": [7, 17, 27],
+  "policy_config_template": "configs/phase2a/policy/{mode}_seed_{seed}.json",
+  "selection_rule": "No automatic winner. Candidate F can move to team review only when full-input PPO beats its same-seed separately trained no-pheromone PPO and random action on seeds 7, 17 and 27. This remains development work; Phase 2B does not start from a single seed.",
+  "required_reports": [
+    "local pheromone-exposure diagnostic for the earlier Candidate E full policies",
+    "per-seed stochastic and deterministic food-delivery means",
+    "full-minus-no-pheromone paired differences",
+    "random-action reference on the same diagnostic maps",
+    "completed-task rate and episode length",
+    "training/runtime provenance and every failed run"
+  ]
+}

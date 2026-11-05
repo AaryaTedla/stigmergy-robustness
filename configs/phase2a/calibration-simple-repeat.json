@@ -1,0 +1,20 @@
+{
+  "format_version": 1,
+  "purpose": "development_only_phase2a_calibration",
+  "description": "A simple clean follow-up: check whether smaller grids with repeated food trips make the full pheromone input reliably useful before Phase 2B.",
+  "environment_candidates": [
+    "configs/phase2a/env/candidate_d_10x10_repeat.json",
+    "configs/phase2a/env/candidate_e_12x12_repeat.json"
+  ],
+  "observation_modes": ["full", "no_pheromone"],
+  "training_seeds": [7, 17, 27],
+  "policy_config_template": "configs/phase2a/policy/{mode}_seed_{seed}.json",
+  "selection_rule": "No automatic winner. A candidate can move to team review only when full-input PPO beats its same-seed separately trained no-pheromone PPO and random action on all three declared seeds. This is still development work, not Phase 2B.",
+  "required_reports": [
+    "per-seed stochastic and deterministic food-delivery means",
+    "full-minus-no-pheromone paired differences",
+    "random-action reference on the same diagnostic maps",
+    "completed-task rate and episode length",
+    "training/runtime provenance and every failed run"
+  ]
+}

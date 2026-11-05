@@ -14,7 +14,7 @@ The project asks whether a lightweight defense based only on an agent's local ph
 
 ## Current status
 
-Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Shashannk's clean shared-PPO pipeline and local debugging controller now run with reproducible short development diagnostics; useful learning and pheromone reliance remain unverified. Rohan's attack/provenance foundation adds one bounded persistent false-food injector and paired fixture controls. Tusti's local history and timeout baseline are now integrated with matched PPO/attack development comparisons and plots; see [Tusti's walkthrough](docs/TUSTI_FIRST_REVIEW.md) for usage and the negative timeout result. Decoy/intermittent attacks, split trajectory datasets, and research comparisons remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
+Aarya's clean simulator milestone is implemented: a tested PettingZoo parallel grid environment, local observations, pickup/delivery, bounded food/home fields with evaporation, and a scripted visual demo. Shashannk's clean shared-PPO pipeline and local debugging controller now run with reproducible short development diagnostics; useful learning and pheromone reliance remain unverified. Rohan's attack/provenance foundation adds one bounded persistent false-food injector and paired fixture controls. Tusti's local history and timeout baseline are now integrated with matched PPO/attack development comparisons and plots; see [Tusti's walkthrough](docs/TUSTI_FIRST_REVIEW.md) for usage and the negative timeout result. Candidate J passed Phase 2A's clean pheromone-benefit gate, while all three Phase 2B bounded persistent-attack calibrations (20-unit immediate, 200-unit immediate and 200-unit delayed) found no consistent delivery degradation. Their 108 trajectories are now packaged as a development-only calibration corpus with local records separated from audit metadata, but detector fitting, a final split dataset and robustness work remain blocked pending a new attack-calibration decision. See [the Phase 2A guide](docs/PHASE2A_CALIBRATION.md), [decision 0013](docs/decisions/0013-phase2b-attack-calibration-contract.md), [decision 0014](docs/decisions/0014-phase2b-persistent-attack-duration.md), [decision 0015](docs/decisions/0015-phase2b-delayed-persistent-attack.md) and [decision 0016](docs/decisions/0016-phase2b-development-calibration-corpus.md). Decoy/intermittent attacks, detector fitting, final split trajectory datasets, and research comparisons remain unimplemented. The three final Word documents in [`docs/reference`](docs/reference/) are the authoritative project records. [`docs/CONTEXT.md`](docs/CONTEXT.md) tracks verified progress.
 
 ## Updated eight-agent review demo
 
@@ -54,6 +54,115 @@ See [Shashannk's walkthrough](docs/SHASHANNK_FIRST_REVIEW.md) for the code readi
 ```
 
 Each output directory must be new. All agents use the same PPO actor/local value network on the existing local observation. The smoke budget is 4096 agent transitions; `configs/policy/development.json` provides the planned 300000-transition budget. The pinned training stack was verified on Windows Python 3.12.10; the declared Python 3.11 target still requires a recheck. Full-stack checks passed 61 tests. Two smoke runs matched exactly; deterministic diagnostic deliveries remained zero. A short run is pipeline evidence and does not establish useful coordination or robustness.
+
+## Review 2 validation audit
+
+The 2026-11-05 pinned Python 3.12.14 audit passed **162 tests**, versus the
+unmodified Phase 2B baseline of 124. It includes the Phase 2A paired-config and
+resume correction (Phase 2A independently passed 116 versus baseline 107),
+strict local numeric/action/outcome validation, complete unique scenario
+families and consistent manifest/split/index provenance. Small real frozen-PPO
+rollouts passed through repeated corpus and CSV exports with unchanged
+checkpoint bytes. Failure/interruption and fresh-output checks passed.
+
+See [the audit record](docs/REVIEW2_AUDIT.md), [decision 0017](docs/decisions/0017-review2-provenance-validation.md)
+and [the 12-page learning PDF](output/pdf/review2_implementation_learning_guide.pdf)
+and [its source](docs/REVIEW2_IMPLEMENTATION_GUIDE.md).
+The older handbook remains historical. New root manifests bind configuration/
+source bytes and immutable child artifacts; unverifiable legacy resumes require
+fresh output without modifying history. Original Candidate J checkpoints and
+the complete generated corpus are absent here: their metrics remain previously
+recorded, not independently rerun. Prepared [slide replacements and notes](docs/REVIEW2_SLIDE_UPDATES.md)
+are separate from live Canva edits, which currently await browser access.
+
+## Phase 2A calibration (completed; Candidate J passed the clean gate)
+
+The current eight-agent review checkpoint does not show beneficial pheromone use: clean and attacked delivery were equal, and a frozen-policy input ablation slightly improved sampled delivery. Before collecting attack or detector data, Phase 2A compares three larger/repeated-retrieval development environments and three PPO seeds against separately trained no-pheromone PPO baselines plus random actions. The baseline masks only food/home pheromone entries in copied policy batches during both training and evaluation; it does not alter simulator observations or mechanics.
+
+The declared matrix, random baseline, reporting fields, and advancement gate are documented in [the Phase 2A guide](docs/PHASE2A_CALIBRATION.md) and [decision 0006](docs/decisions/0006-phase2a-calibration-contract.md). Earlier candidates had mixed paired results, but the capacity-only Candidate J follow-up passed the strict stochastic gate on seeds 7, 17 and 27: its full-minus-no-pheromone delivery was +31.25, +16.50 and +19.50, while it also beat random action in every pair. Candidate J is the clean-policy basis for Phase 2B planning; attack calibration, data splits, detector fitting and robustness claims still require their own documented Phase 2B protocol. See [decision 0012](docs/decisions/0012-phase2a-scout-follow-capacity.md).
+
+```bash
+python -m stigmergy.cli phase2a-calibrate --output artifacts/phase2a/calibration-run-001
+```
+
+If a process is interrupted after writing its manifest, resume only that exact
+plan/output pair; completed PPO artifacts are reused and a partial job is
+preserved in place:
+
+```bash
+python -m stigmergy.cli phase2a-calibrate --output artifacts/phase2a/calibration-run-001 --resume
+```
+
+The command is covered by the pinned audit suite; it does not select an environment automatically or generate the final dataset. The full historical training matrices were not rerun during this audit.
+
+## Phase 2B attack calibration (completed; negative result)
+
+Phase 2B's development-only calibrations freeze Candidate J's three
+full PPO checkpoints and run matched clean, injection-disabled and bounded
+persistent-attack episodes. They keep attacker identity and injected mass out
+of policy-visible inputs and assign each complete policy/map/action family to
+one group before any future detector windows. The 20-unit matrix produced a
+mean honest-delivery injection loss of -2.17 units; a capacity-only 200-unit
+immediate follow-up produced -0.42 units; and a 200-unit attack delayed until
+transition 201 produced -2.25 units. None established consistent degradation,
+so detector fitting, defense tuning and robustness claims remain unauthorized.
+
+```bash
+python -m stigmergy.cli phase2b-calibrate \
+  --plan configs/phase2b/attack-calibration.json \
+  --output artifacts/phase2b/attack-calibration-run-001
+
+python -m stigmergy.cli phase2b-calibrate \
+  --plan configs/phase2b/attack-calibration-persistent-200.json \
+  --output artifacts/phase2b/attack-calibration-persistent-200-run-001
+
+python -m stigmergy.cli phase2b-calibrate \
+  --plan configs/phase2b/attack-calibration-persistent-delayed-200.json \
+  --output artifacts/phase2b/attack-calibration-persistent-delayed-200-run-001
+```
+
+All three matrices are verified development-only calibrations. The command does
+not select an environment automatically or generate a final dataset.
+
+## Phase 2B development calibration corpus (completed; not detector data)
+
+The corpus builder packages all three completed calibration matrices into 36
+whole development groups and 108 episodes. Each episode has a
+`model_observable` step file containing only local records and a separate
+`audit` step file containing attack events, attacker identity and global
+accounting. It has no temporal windows, train/validation/test partition,
+detector labels, fitted detector or robustness claim.
+
+```bash
+python -m stigmergy.cli phase2b-build-corpus \
+  --plan configs/phase2b/development-calibration-corpus.json \
+  --output data/generated/phase2b-development-calibration-corpus-002
+```
+
+Use a new output directory each time. Generated corpus data is intentionally
+local and ignored by Git; the plan, builder, tests and [decision 0016](docs/decisions/0016-phase2b-development-calibration-corpus.md)
+are versioned.
+
+### Inspectable agent-step CSV view
+
+For spreadsheet or dataframe inspection, export only the corpus's local records
+into one agent-step CSV. Each row represents one agent at one completed
+environment transition. The generated schema separates safe local input columns
+(58 observations plus 12 local-history features) from provenance and local
+outcome columns. The export never reads the corpus audit tree, so attacker
+identity, attack events, injected mass and global delivery cannot become CSV
+features. This is still development-only data preparation: it does not create
+detector labels, temporal windows, a train/validation/test split or a trained
+model.
+
+```bash
+python -m stigmergy.cli phase2b-export-agent-steps \
+  --corpus data/generated/phase2b-development-calibration-corpus-003 \
+  --output data/generated/phase2b-agent-steps-001
+```
+
+See [the Phase 2B dataset roadmap](docs/PHASE2B_DATASET_ROADMAP.md) for the
+literature delta, architecture diagram, data boundary and next milestones.
 
 ## Local-defense foundation
 
@@ -96,7 +205,7 @@ Misleading pheromone, minority disruption, and cautionary-pheromone mitigation a
 
 The initial implementation target is Python 3.11. The expected dependency categories are NumPy, PettingZoo, SuperSuit, Stable-Baselines3, PyTorch, scikit-learn, pandas, PyArrow, PyYAML, matplotlib, and pytest. Exact versions must be selected, tested, and pinned when implementation starts.
 
-The JSON-configured `demo`, `record-fixture`, `debug-policy`, `train` and `compare-development` commands are implemented. The YAML-configured interfaces below describe future plans; use the JSON PPO commands above for the current pipeline.
+The JSON-configured `demo`, `record-fixture`, `debug-policy`, `train`, `phase2a-calibrate` and `compare-development` commands are implemented. The YAML-configured interfaces below describe future plans; use the JSON PPO commands above for the current pipeline.
 
 ```bash
 python3.11 -m venv .venv

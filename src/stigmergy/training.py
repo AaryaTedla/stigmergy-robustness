@@ -3,8 +3,10 @@
 Use the CLI train command with a JSON TrainingConfig and a JSON GridConfig.
 One SB3 PPO MLP (32x32 actor and local critic) consumes the (N,58) observation
 batch from SharedGridVecEnv; every row is an agent-local input. The unchanged
-shared delivery count is the reward. No global-state critic, reward shaping,
-identity encoding, attack training or final-test tuning occurs here.
+shared delivery count is the reward. ``observation_mode="no_pheromone"`` trains
+a separate Phase 2A baseline with only local pheromone entries masked during
+both learning and diagnostics. No global-state critic, reward shaping, identity
+encoding, attack training or final-test tuning occurs here.
 
 The requested budget is in agent transitions, not world steps. SB3 rounds up
 to whole n_steps*N rollouts; the actual count is saved. Maps cycle through
@@ -37,6 +39,7 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.logger import configure
 
 from .environment import GridConfig, ResourceRetrievalEnv
+from .observations import OBSERVATION_MODES, apply_observation_mode
 from .ppo_adapter import SharedGridVecEnv
 from .trajectories import _git_provenance
 
@@ -52,6 +55,7 @@ class TrainingConfig:
     n_epochs: int = 4
     learning_rate: float = 0.0003
     gamma: float = 0.99
+    observation_mode: str = "full"
     train_map_seeds: tuple = tuple(range(16))
     diagnostic_map_seeds: tuple = (100, 101, 102, 103)
 
@@ -67,6 +71,8 @@ class TrainingConfig:
                 raise ValueError(f"{name} must be a finite number")
         if self.learning_rate <= 0 or not 0 <= self.gamma <= 1:
             raise ValueError("require learning_rate > 0 and gamma in [0,1]")
+        if self.observation_mode not in OBSERVATION_MODES:
+            raise ValueError(f"observation_mode must be one of {OBSERVATION_MODES}")
         for name in ("train_map_seeds", "diagnostic_map_seeds"):
             seeds = tuple(getattr(self, name))
             if not seeds or any(isinstance(s, bool) or not isinstance(s, int) or s < 0 for s in seeds):
@@ -87,12 +93,12 @@ def policy_digest(model):
     return digest.hexdigest()
 
 
-def evaluate_model(model, grid, map_seeds, action_seed):
+def evaluate_model(model, grid, map_seeds, action_seed, observation_mode="full"):
     """Measure local PPO behavior on development maps without changing training RNG.
 
-    Actor calls receive only copied local rows. Global delivered counts are
-    simulator-only diagnostic outputs. A forked CPU RNG isolates evaluation
-    from subsequent training, and pairs initial/final stochastic action seeds.
+    Actor calls receive only copied local rows transformed by the declared
+    training mode. Global delivered counts are simulator-only diagnostics.
+    A forked CPU RNG isolates evaluation from subsequent training.
     """
     results = {}
     for deterministic in (True, False):
@@ -104,7 +110,8 @@ def evaluate_model(model, grid, map_seeds, action_seed):
                 torch.manual_seed(action_seed + map_seed)
                 while world.agents:
                     agents = tuple(world.agents)
-                    batch = np.stack([observations[a] for a in agents])
+                    batch = apply_observation_mode(np.stack([observations[a] for a in agents]),
+                                                   observation_mode)
                     actions, _ = model.predict(batch, deterministic=deterministic)
                     observations, _, _, _, _ = world.step(dict(zip(agents, map(int, actions))))
             episodes.append({"map_seed": map_seed, "steps": world.steps,
@@ -146,7 +153,7 @@ def run_training(grid_path, training_path, output):
     try:
         torch.set_num_threads(1)
         torch.use_deterministic_algorithms(True)
-        adapter = SharedGridVecEnv(grid, training.train_map_seeds)
+        adapter = SharedGridVecEnv(grid, training.train_map_seeds, training.observation_mode)
         model = PPO("MlpPolicy", adapter, seed=training.seed, device="cpu",
                     n_steps=training.n_steps, batch_size=training.batch_size,
                     n_epochs=training.n_epochs, learning_rate=training.learning_rate,
@@ -154,7 +161,8 @@ def run_training(grid_path, training_path, output):
         model.set_logger(configure(str(output), ["csv"]))
         initial_hash = policy_digest(model)
         model.save(output / "initial.zip")
-        before = evaluate_model(model, grid, training.diagnostic_map_seeds, training.seed)
+        before = evaluate_model(model, grid, training.diagnostic_map_seeds, training.seed,
+                                training.observation_mode)
         model.learn(total_timesteps=training.total_transitions)
         if not all(torch.isfinite(value).all().item() for value in model.policy.state_dict().values()):
             raise RuntimeError("nonfinite learned parameters")
@@ -162,12 +170,13 @@ def run_training(grid_path, training_path, output):
         model.save(output / "policy.zip")
         reloaded = PPO.load(output / "policy.zip", device="cpu")
         probe, _ = ResourceRetrievalEnv(grid).reset(seed=training.diagnostic_map_seeds[0])
-        rows = np.stack(list(probe.values()))
+        rows = apply_observation_mode(np.stack(list(probe.values())), training.observation_mode)
         roundtrip = (policy_digest(reloaded) == final_hash and np.array_equal(
             model.predict(rows, deterministic=True)[0], reloaded.predict(rows, deterministic=True)[0]))
         if not roundtrip:
             raise RuntimeError("checkpoint roundtrip mismatch")
-        after = evaluate_model(reloaded, grid, training.diagnostic_map_seeds, training.seed)
+        after = evaluate_model(reloaded, grid, training.diagnostic_map_seeds, training.seed,
+                               training.observation_mode)
         summary = {"requested_agent_transitions": training.total_transitions,
                    "actual_agent_transitions": model.num_timesteps,
                    "world_steps": model.num_timesteps // grid.n_agents,
@@ -176,7 +185,7 @@ def run_training(grid_path, training_path, output):
                    "before": before, "after": after, "training_episodes": adapter.episode_records,
                    "limitations": ["single training seed; development diagnostics only",
                                    "no verified pheromone reliance or robustness",
-                                   "no no-pheromone baseline or final held-out evaluation"]}
+                                   "no final held-out evaluation"]}
         (output / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
         manifest.update(status="completed", elapsed_seconds=time.perf_counter() - start)
         save_manifest()

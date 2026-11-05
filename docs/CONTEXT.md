@@ -76,10 +76,55 @@ These are agreed implementation requirements, not proof that code already exists
 
 ## Current verified repository state
 
-- Latest verified milestone: corrected nest-anchored home mechanics and fresh
-  eight-agent minority-condition development runs; see the 2026-10-09 entry
-  below and [the updated demo guide](REVIEW_DEMO.md). Earlier entries preserve
-  historical results and must not be read as the current mechanics.
+- Review 2 learning handoff, 2026-11-05: created a separate 12-page searchable
+  learning PDF with 12 bookmarks and 11 internal contents links. All pages
+  rendered and visually inspected; titles/tables/code fit their measured frames.
+  It records source code revisions phase2a `0ec8349` / phase-2b `0aa1219`,
+  distinguishes historical metrics from fresh checks, and covers mechanics,
+  PPO, calibration, logging/corpus/CSV boundaries, files, commands and review
+  explanations. The older handbook is preserved. Exact slide replacement text
+  and notes are prepared in REVIEW2_SLIDE_UPDATES.md; live Canva changes remain
+  pending because no browser/document session is available.
+
+- Review 2 Phase 2B validation audit, 2026-11-05: unmodified baseline 124 / final
+  162 tests passed on pinned Linux Python 3.12.14, with dependency consistency.
+  Inherited the independently verified Phase 2A validation correction. Corpus/
+  export now reject missing/duplicate scenario families, inconsistent map/seed/
+  split provenance, unknown local fields, non-finite numeric inputs/rewards,
+  invalid actions and non-Boolean outcomes. A tiny genuine frozen PPO triplet
+  passed repeated calibration -> corpus -> CSV integration; checkpoint bytes
+  stayed unchanged. Repeated outputs, existing-directory refusal and failed/
+  incomplete status checks passed. No environment, PPO, attack settings,
+  partitions, label/detector or evaluation behavior changed. Original J/corpus
+  artifacts remain unavailable here; 108 episodes / 36 groups / 412,016 rows
+  and negative calibration losses remain previously recorded, not rerun.
+  See REVIEW2_AUDIT.md and decision 0017. Canva access is unavailable; prepared
+  slide updates are not a saved Canva edit.
+
+- Review 2 validation audit, 2026-11-05: Phase 2A branch baseline 107 tests;
+  final 116 tests on pinned Linux Python 3.12.14. Enforced identical paired
+  settings/maps, bound new root manifests to config/source bytes, and validated
+  immutable completed child evidence before resume. A fresh 4,096-transition
+  integration run changed parameters and passed checkpoint reload; deterministic
+  mean stayed 0, stochastic diagnostic mean was 1.75 before / 4.00 after.
+  This uses the two-agent development configuration, not Candidate J. It does
+  not replace historical research results. Original Candidate J checkpoints
+  and run artifacts are absent; see REVIEW2_AUDIT.md and decision 0017.
+  No environment, training implementation, policy settings or attack behavior
+  changed. New resume validation intentionally rejects unverifiable legacy
+  roots without modifying them.
+
+- Latest verified milestone: Candidate J completed Phase 2A's capacity-only
+  scout-and-follow validation on Linux Python 3.12.14. With Candidate G's
+  long-horizon task unchanged except for 50 rather than 30 units per food
+  patch, full-input PPO beat separately trained no-pheromone PPO on all three
+  stochastic development comparisons by +31.25, +16.50 and +19.50 delivered
+  units (seeds 7/17/27), and beat random action in every pair. The mechanical
+  gate is true, so Candidate J is ready for Phase 2B planning. Deterministic
+  diagnostics remain mixed, and this is only clean development evidence—not
+  an attack, detector, dataset, held-out evaluation or robustness result. See
+  decision 0012 and the 2026-11-01 entry below. Earlier negative results
+  remain historical evidence and must not be read as the current gate state.
 
 - A clean grid environment and scripted mechanics demo are implemented and verified; see the implementation entry below.
 - A first local-defense foundation exists in `src/stigmergy/defense.py`: agent-local temporal features and a deterministic timeout baseline. Eight focused checks initially passed via an isolated Python 3.12 import. Those checks now also pass through the installed package in Shashannk's 61-test full-stack suite, including initial-observation timing. This component checkpoint was subsequently integrated into the development comparison pipeline recorded below; robustness remains unverified.
@@ -88,6 +133,11 @@ These are agreed implementation requirements, not proof that code already exists
 - Short-run initial/final checkpoints exist only in ignored local artifacts. No detector, split trajectory dataset or research benchmark result exists. Persistent attack mode is the sole implemented mode; decoy and intermittent modes remain future work.
 - The files in `docs/reference/` are finalized project documents copied into this repository as canonical references.
 - The JSON demo, fixture recorder, local debug policy and clean PPO train and development comparison commands are runnable with their documented dependencies. Evaluation/dataset commands beyond development diagnostics remain planned.
+- Phase 2A's `phase2a-calibrate` command now supports a plan-validated
+  `--resume` mode. It reuses manifest-recorded PPO rows, preserves a partial
+  training directory and uses a fresh `-resume-N` sibling for its replacement;
+  it rewrites only derived aggregate reports. This is execution recovery, not
+  a change to the environment, baseline, or evaluation protocol.
 
 ## Project roadmap
 
@@ -125,6 +175,199 @@ Do not update the context merely because code was drafted, a test was skipped, a
 When code exists, append concise entries under these headings instead of rewriting history:
 
 ### Implemented and verified
+
+2026-11-02 — Phase 2B inspectable agent-step dataset view
+(`phase2b_dataset.py`, `phase2b-export-agent-steps`,
+`PHASE2B_DATASET_ROADMAP.md`) exported the completed development corpus into
+the ignored local directory `data/generated/phase2b-agent-steps-001/`. It
+contains 412,016 rows—one agent at one completed environment transition—from
+103,004 environment steps, 108 episodes and 36 intact groups. The CSV schema
+separates 58 local-observation and 12 local-history input columns from
+provenance (group/map/scenario/seed) and local transition outcome columns.
+The exporter reads only `model_observable` records, never opens the audit tree,
+and fails if attack metadata leaks into a local record. Focused exporter,
+corpus, Phase 2B and attack tests passed 28 cases. This is inspectable,
+development-only data preparation; it creates no temporal windows, final
+split, detector labels, trained model or robustness result.
+
+2026-11-01 — Phase 2B development calibration corpus
+(`phase2b_corpus.py`, `phase2b-build-corpus`,
+`development-calibration-corpus.json`, decision 0016) completed on pinned
+Linux Python 3.12.14. It packages all three completed negative persistent-attack
+calibrations, rather than selecting a favourable run, into the local ignored
+directory `data/generated/phase2b-development-calibration-corpus-002/`: 36
+whole development groups and 108 episodes, with three scenarios per group.
+Each model-observable step file contains only the local record; a matching audit
+tree holds scenario provenance, attacker identity, false-mass accounting,
+attack events and global/honest delivery. The corpus has no temporal windows,
+train/validation/test partition, detector labels, fitted detector, defense or
+held-out claim. The group-split manifest keeps every calibration/policy/map/
+action family together. Boundary inspection found zero simulator-only attack
+fields in 108 model-observable files. Focused corpus tests (3), focused
+corpus/Phase 2B/attack checks (26) and the complete suite (122) passed. This is
+a reproducibility/data-engineering milestone only, not evidence of an effective
+attack or a final research dataset.
+
+2026-11-01 — Phase 2B's delayed persistent-attack follow-up
+(`persistent-phase2b-delayed-200.json`,
+`attack-calibration-persistent-delayed-200.json`, decision 0015) completed on
+pinned Linux Python 3.12.14. It retained the 200-unit immediate calibration's
+three frozen Candidate J policies, four development maps, stochastic action
+seed, one episode-fixed attacker, local placement, budgets and matched
+controls, changing only onset: no false-food request during the first 200
+transitions and first permitted deposit on transition 201. The 36 fresh
+episodes in
+`artifacts/phase2b/attack-calibration-persistent-delayed-200-run-001/`
+applied the full 200-unit cap in every attacked episode. Clean and disabled
+local trajectories matched, disabled/attacked twins selected the same agent,
+and all scenario families stayed whole in the development split manifest. Mean
+paired honest-delivery injection loss was -2.25 units: one positive, six zero
+and five negative groups. Thus delayed persistent injection still did not
+establish consistent attack degradation. Focused checks (23) and the complete
+suite (119) passed. This is a third preserved negative development calibration,
+not a detector/dataset/defense/held-out robustness result; do not change the
+attack again without a new decision.
+
+2026-11-01 — Phase 2B's bounded-duration persistent-attack follow-up
+(`persistent-phase2b-200.json`,
+`attack-calibration-persistent-200.json`, decision 0014) completed on pinned
+Linux Python 3.12.14. It retained the initial calibration's three frozen
+Candidate J policies, four development maps, stochastic action seed, one
+episode-fixed attacker, local placement and all matched controls, changing
+only the false-food episode cap from 20 to 200 units. The 36 fresh episodes in
+`artifacts/phase2b/attack-calibration-persistent-200-run-001/` applied the
+full 200-unit cap in every attacked episode. Mean paired honest-delivery
+injection loss was -0.42 units: two positive, five zero and five negative
+groups. Thus longer injection duration changed trajectories but still did not
+establish consistent attack degradation. Focused Phase 2B checks (7) and the
+complete suite (114) passed. This is a second preserved negative development
+calibration, not a detector/dataset/defense/held-out robustness result; do not
+change the attack again without a new decision.
+
+2026-11-01 — Phase 2B's initial persistent-attack calibration
+(`phase2b.py`, `phase2b-calibrate`, `configs/phase2b/attack-calibration.json`,
+decision 0013) completed on pinned Linux Python 3.12.14. It verified three
+frozen Candidate J full-input checkpoints, then ran 36 matched stochastic
+development episodes: three training seeds × diagnostic maps 100--103 × clean,
+injection-disabled and attacked scenarios. The four-agent task used one
+episode-fixed attacker (25%) with the existing occupied-cell, nonnegative
+persistent false-food injector and a 1.0-per-step/20.0-per-episode budget.
+Every attacked episode applied 20.0 units; clean and disabled local trajectories
+matched, while disabled and attacked twins selected the same compromised agent.
+The mean paired honest-delivery injection loss was -2.17 units (eight zero,
+one positive and three negative groups), so this setting did not establish
+attack degradation. A group-level development split manifest was saved before
+any future temporal windows. The complete suite passed 113 tests. This is a
+preserved negative calibration result, not detector, defense, dataset,
+held-out-evaluation or robustness evidence; any changed attack calibration
+requires another decision.
+
+2026-11-01 — Phase 2A's capacity-only Candidate J validation
+(`action_sensitivity.py`, `phase2a_action_sensitivity.py`,
+`candidate_j_12x12_scout_follow_capacity.json`,
+`calibration-scout-follow-capacity.json`, decision 0012) completed on pinned
+Linux Python 3.12.14. A local-only frozen-policy diagnostic first found that
+Candidate G's full policies changed their stochastic action distributions when
+only local pheromone entries were masked (visible-observation mean total
+variation 0.272/0.187/0.230 across seeds 7/17/27). Candidate J then retained
+that long-horizon scout-and-follow task and changed only food capacity from 30
+to 50 units per patch. Its six fresh PPO jobs and three seeded random
+references are in `artifacts/phase2a/scout-follow-capacity-run-001/`.
+Full-minus-no-pheromone stochastic delivery was +31.25/+16.50/+19.50 and
+full-minus-random was +97.00/+78.25/+97.75, so the predeclared strict gate is
+true. The timeout-interrupted initial invocation was preserved; a
+plan-identical resume recorded fresh `-resume-1` outputs without overwriting
+partial artifacts. The complete suite passed 107 tests. Candidate J is the
+clean learned-policy basis for Phase 2B planning, but its deterministic
+diagnostics were mixed and no attack, detector, dataset, held-out evaluation
+or robustness claim exists yet.
+
+2026-10-31 — Phase 2A learned-stigmergy calibration (`calibration.py`,
+`observations.py`, `configs/phase2a/`, decision 0006) completed on pinned
+Linux Python 3.12.14. The fixed development-only matrix contains three
+eight-agent candidates, three PPO seeds (7/17/27), and full versus separately
+trained no-pheromone 58-value policies: 18 PPO runs, plus nine seeded random
+references, all evaluated on diagnostic maps 100–103. The ignored artifact
+`artifacts/phase2a/calibration-run-001/` contains 27 report rows and nine
+same-seed paired rows. Candidate A full-minus-no-pheromone stochastic delivery
+was +2.50, -12.00 and +1.75; B was +8.50, -1.75 and +2.75; C was +6.75,
+0.00 and -0.25. Although full input beat random in most pairs, each candidate
+failed the required strict all-three-seed full-over-no-pheromone gate; all
+three mechanical gate flags are false. The matrix therefore does not establish
+beneficial pheromone coordination and explicitly blocks Phase 2B attack,
+detector, trajectory-dataset and held-out robustness work pending a new team
+decision. A process interruption was preserved and resumed without overwriting
+the partial output. Focused calibration/observation/training checks (24) and
+the complete suite (95) passed. All results are development-only, use a dirty
+working tree with per-run provenance, and have no uncertainty estimate or
+final-split relevance.
+
+2026-10-31 — A simpler Phase 2A follow-up (`calibration-simple-repeat.json`,
+`candidate_d_10x10_repeat.json`, `candidate_e_12x12_repeat.json`, decision
+0007) also completed on Linux Python 3.12.14. It kept the same eight agents,
+PPO, local inputs, three seeds and fair full/no-pheromone training. It only
+made the map smaller and added more food so agents could make more repeat
+trips. The 12 PPO runs and six random references are in
+`artifacts/phase2a/simple-repeat-run-001/`. Candidate D full-minus-no-pheromone
+delivery was -0.25, +2.00 and 0.00; Candidate E was +2.75, +5.00 and -0.50
+(seeds 7/17/27). Both maps beat random actions, but neither passed the strict
+all-three-seed rule. This is another useful negative clean result: do not make
+the Phase 2B dataset or start attack/detector work yet. The simple-plan check
+and full suite passed 96 tests before the run; outputs have completed manifests
+and preserved provenance.
+
+2026-10-31 — The Phase 2A slow-evaporation check (`exposure.py`,
+`phase2a_exposure.py`, `candidate_f_12x12_slow_evaporation.json`,
+`calibration-slow-evaporation.json`, decision 0008) completed on Linux Python
+3.12.14. It changed only Candidate E's evaporation from 0.10 to 0.02, then ran
+six new full/no-pheromone PPO jobs and three random references. The local-only
+exposure diagnostic showed more stochastic food-trail visibility for Candidate
+F than Candidate E: 55.54/39.14/49.32% versus 34.24/28.95/37.00% for seeds
+7/17/27. This confirms that slower evaporation made food values more available
+in local observations; it does not prove policy use. Candidate F full-minus-
+no-pheromone delivery was +2.75, +4.00 and -1.25, while full PPO beat random
+on all three seeds. Because it lost the fair comparison on seed 27, the gate
+is false. The complete Python 3.12 suite passed 99 tests before this completed
+matrix. This is a checked negative clean result: do not start Phase 2B or make
+an attack/detector dataset; a new decision is required before another change.
+
+2026-10-31 — The Phase 2A scout-and-follow check (`food_layout` in
+`environment.py`, `candidate_g_12x12_scout_follow.json`,
+`calibration-scout-follow.json`, decision 0009) completed on Linux Python
+3.12.14. It introduced a seed-varying pair of adjacent food cells far from the
+nest, using four agents, 30 food units per cell, a 1,100-step horizon and 2%
+evaporation. Explicit fixture positions still override the generated layout.
+The six PPO jobs and three random references are in
+`artifacts/phase2a/scout-follow-run-001/`. Full-minus-no-pheromone stochastic
+delivery was 0.00, +8.75 and +5.75 (seeds 7/17/27); full PPO delivered all 60
+units and beat random on every seed. It also completed all maps faster than
+no-pheromone PPO. The seed-7 60-unit tie fails the declared strict-delivery
+gate, so this useful near-result still does not authorize Phase 2B.
+
+2026-10-31 — The fresh time-limited scout-and-follow validation
+(`candidate_h_12x12_scout_follow_deadline.json`,
+`calibration-scout-follow-deadline.json`, decision 0010) changed only the
+horizon from 1,100 to 700 and retrained every policy. The six PPO jobs and
+three random references are in
+`artifacts/phase2a/scout-follow-deadline-run-001/`. Full-minus-no-pheromone
+stochastic delivery was -51.50, -42.75 and +5.50. Full PPO delivered zero on
+the first two seeds, below random movement, so the shorter deadline made the
+full-input training unstable at the fixed 300,000-transition budget. Candidate
+H fails the gate. The complete pinned Python 3.12 suite passed 103 tests before
+this matrix. Preserve both results; do not start Phase 2B or change another
+environment without a new decision.
+
+2026-10-31 — The scout-and-follow training-budget validation
+(`calibration-scout-follow-stability.json`, six `stability_*.json` policy
+configs, decision 0011) retrained the same 700-step Candidate H task with
+600,000 agent transitions per full/no-pheromone policy. The six PPO jobs and
+three random references are in
+`artifacts/phase2a/scout-follow-stability-run-001/`. Full-minus-no-pheromone
+stochastic delivery was -50.75, -39.25 and -5.25 (seeds 7/17/27). Full PPO
+lost to no-pheromone PPO on every seed, so doubling the budget did not fix the
+short-horizon instability. The complete pinned Python 3.12 suite passed 104
+tests before the matrix. Candidate I fails the gate; do not repeat this
+700-step configuration or start Phase 2B.
 
 2026-10-08 — Fresh Linux review verification on clean source revision `76970cc`: simulator/core checks on Python 3.11.16 passed 50 tests with two optional-stack skips. The pinned training lock failed resolution on Python 3.11 because `contourpy==1.4.0` requires Python >=3.12. A separate Python 3.12.14 environment installed the unchanged lock, passed dependency consistency and all 73 tests. A fresh 4096-transition PPO run passed parameter-update/reload checks and reproduced stochastic means 1.75 before/3.75 after; deterministic means remained zero. The fresh 48-episode comparison preserved its checkpoint and reproduced team means 3.75 without timeout/zero with timeout, zero injection loss, -2 honest-unit timeout gain, and undefined recovery. Clean/disabled fixture records matched; attacked fixture applied 20 units; all scripted fixtures delivered eight units in 89 steps. Actual-state PNGs and two-slide speaking notes were generated under ignored `artifacts/review-current/`. No source mechanics, training budgets, defense rules, or evaluation protocol changed. This verifies Linux execution and preserves negative results, not useful coordination or robustness.
 
@@ -217,6 +460,11 @@ working-tree changes based on `cf260b6`.
 
 - Resolve the training lock's demonstrated Python 3.11 incompatibility (`contourpy==1.4.0` requires Python >=3.12) before claiming full-stack support on the declared target. Linux Python 3.12.14 is now verified. Audit the narrow adapter when expanding the simulator's fixed lifecycle.
 - Frozen-policy input sensitivity is now measured; establish beneficial pheromone use and reliable cooperation before interpreting robustness.
+- Phase 2A's declared benefit gate failed for every candidate, including the
+  scout-and-follow and time-limited follow-ups. Preserve all completed
+  calibrations. Create another follow-up decision record before changing
+  mechanics, observations, rewards, maps, policy architecture, or attack work;
+  do not generate a detector dataset from these policies.
 - Investigate the negative timeout development result and confirm pheromone reliance before the full required baseline study; development comparisons do not establish robustness.
 - Freeze the final test manifest before held-out evaluation and retain clean/control/attack pairings.
 - Recheck the qualified dataset finding and literature coverage before manuscript submission.
