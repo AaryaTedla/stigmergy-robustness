@@ -76,6 +76,19 @@ These are agreed implementation requirements, not proof that code already exists
 
 ## Current verified repository state
 
+- Review 2 validation audit, 2026-11-05: Phase 2A branch baseline 107 tests;
+  final 116 tests on pinned Linux Python 3.12.14. Enforced identical paired
+  settings/maps, bound new root manifests to config/source bytes, and validated
+  immutable completed child evidence before resume. A fresh 4,096-transition
+  integration run changed parameters and passed checkpoint reload; deterministic
+  mean stayed 0, stochastic diagnostic mean was 1.75 before / 4.00 after.
+  This uses the two-agent development configuration, not Candidate J. It does
+  not replace historical research results. Original Candidate J checkpoints
+  and run artifacts are absent; see REVIEW2_AUDIT.md and decision 0017.
+  No environment, training implementation, policy settings or attack behavior
+  changed. New resume validation intentionally rejects unverifiable legacy
+  roots without modifying them.
+
 - Latest verified milestone: Candidate J completed Phase 2A's capacity-only
   scout-and-follow validation on Linux Python 3.12.14. With Candidate G's
   long-horizon task unchanged except for 50 rather than 30 units per food

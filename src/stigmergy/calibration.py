@@ -13,6 +13,11 @@ same-seed full-minus-no-pheromone and full-minus-random contrasts, and
 ``summary.json``. The runner never selects a winner or starts attack/dataset
 generation. Its reported gate flag is a mechanical summary for team review;
 all runs, including failures and non-advancing candidates, remain visible.
+
+New roots bind candidate/policy files and execution source bytes. Resume rejects
+changed inputs, invalid cached metrics and changed/missing training artifacts
+before rewriting any manifest. Legacy roots without these hashes remain readable
+but require a fresh run directory; historical evidence is never rewritten.
 """
 
 from dataclasses import asdict
@@ -61,6 +66,7 @@ def _load_plan(plan_path):
     template = raw["policy_config_template"]
     if not isinstance(template, str) or "{mode}" not in template or "{seed}" not in template:
         raise ValueError("policy_config_template must include {mode} and {seed}")
+    policies = {}
     for mode in modes:
         for seed in seeds:
             policy_path = root / template.format(mode=mode, seed=seed)
@@ -69,6 +75,12 @@ def _load_plan(plan_path):
             policy = json.loads(policy_path.read_text(encoding="utf-8"))
             if policy.get("seed") != seed or policy.get("observation_mode") != mode:
                 raise ValueError(f"policy config does not match declared mode/seed: {policy_path.relative_to(root)}")
+            policies[(seed, mode)] = {k: v for k, v in policy.items() if k != "observation_mode"}
+    for seed in seeds:
+        if policies[(seed, "full")] != policies[(seed, "no_pheromone")]:
+            raise ValueError("paired policy settings/maps must match except observation_mode")
+    if len({candidate[0] for candidate in resolved}) != len(resolved):
+        raise ValueError("candidate config stems must be unique output identifiers")
     return raw, root, tuple(resolved), modes, seeds
 
 
@@ -144,7 +156,78 @@ def _resumed_output_path(output, candidate_id, mode, seed):
         attempt += 1
 
 
-def _resume_manifest(output, plan, plan_sha256, expected_ppo_runs, expected_random_runs):
+def _input_fingerprints(root, candidates, plan, modes, seeds):
+    """Bind referenced configuration bytes and code, not just the root plan JSON.
+
+    This prevents a plan-identical resume from mixing old and new experiments
+    after a referenced environment, policy setting or implementation changes.
+    No generated output or runtime is part of this deterministic signature.
+    """
+    paths = {str(path.relative_to(root)): path for _, path, _ in candidates}
+    for mode in modes:
+        for seed in seeds:
+            relative = plan["policy_config_template"].format(mode=mode, seed=seed)
+            paths[relative] = root / relative
+    source = Path(__file__).parent
+    for name in ("calibration.py", "environment.py", "observations.py",
+                 "ppo_adapter.py", "training.py", "policies.py"):
+        paths[f"src/stigmergy/{name}"] = source / name
+    return {name: hashlib.sha256(path.read_bytes()).hexdigest()
+            for name, path in sorted(paths.items())}
+
+
+def _artifact_fingerprints(directory):
+    """Hash the immutable completed-run evidence needed to reuse a PPO row."""
+    try:
+        return {name: hashlib.sha256((directory / name).read_bytes()).hexdigest()
+                for name in ("manifest.json", "summary.json", "policy.zip")}
+    except OSError as error:
+        raise ValueError("completed PPO row requires manifest, summary and checkpoint artifacts") from error
+
+
+def _validate_completed_row(row, output, root, expected):
+    """Check cached metrics against unchanged, completed child artifacts.
+
+    The root's cached delivery values are never accepted merely because they
+    say completed. The child configuration and summary must agree, and the
+    three hashes captured when the row was first written must still match.
+    """
+    candidate_id, seed, mode = row["candidate_id"], row["training_seed"], row["observation_mode"]
+    grid_path, grid, policy_relative = expected[(candidate_id, seed, mode)]
+    if (row.get("grid_config") != asdict(grid) or
+            row.get("grid_config_path") != str(grid_path.relative_to(root)) or
+            row.get("policy_config_path") != policy_relative):
+        raise ValueError("resume row configuration does not match its declared experiment")
+    relative = row.get("output")
+    if not isinstance(relative, str) or Path(relative).is_absolute() or ".." in Path(relative).parts:
+        raise ValueError("resume row output must remain inside the calibration directory")
+    directory = output / relative
+    if not directory.resolve().is_relative_to(output.resolve()):
+        raise ValueError("resume row output must remain inside the calibration directory")
+    if row.get("artifact_sha256") != _artifact_fingerprints(directory):
+        raise ValueError("completed PPO artifacts changed or lack resume hashes; preserve them and use a fresh output")
+    child = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+    summary = json.loads((directory / "summary.json").read_text(encoding="utf-8"))
+    policy = json.loads((root / policy_relative).read_text(encoding="utf-8"))
+    if (child.get("status") != "completed" or child.get("grid_config") != asdict(grid) or
+            any(child.get("training_config", {}).get(k) != v for k, v in policy.items())):
+        raise ValueError("resume child is not the declared completed PPO configuration")
+    try:
+        metrics = _metric_summary(summary["after"])
+        values = {f"{action_mode}_{name}": value for action_mode, fields in metrics.items()
+                  for name, value in fields.items()}
+        values["actual_agent_transitions"] = summary["actual_agent_transitions"]
+        if (set(metrics) != {"deterministic", "stochastic"} or
+                any(isinstance(value, bool) or not isinstance(value, (int, float)) or
+                    not np.isfinite(value) or row.get(key) != value for key, value in values.items()) or
+                values["actual_agent_transitions"] <= 0):
+            raise ValueError("cached values disagree")
+    except (KeyError, TypeError, ValueError) as error:
+        raise ValueError("resume completed metrics must be finite and match the child summary") from error
+
+
+def _resume_manifest(output, plan, plan_sha256, expected_ppo_runs, expected_random_runs,
+                     input_sha256, root, expected):
     """Load and validate an interrupted calibration manifest before resuming.
 
     The validation permits signal-left states and a failed final aggregation
@@ -164,6 +247,8 @@ def _resume_manifest(output, plan, plan_sha256, expected_ppo_runs, expected_rand
     if (manifest.get("ppo_run_count") != expected_ppo_runs or
             manifest.get("random_baseline_count") != expected_random_runs):
         raise ValueError("--resume manifest does not match the declared calibration size")
+    if manifest.get("input_sha256") != input_sha256:
+        raise ValueError("resume inputs changed or lack hashes; preserve historical artifacts and use a fresh output")
     runs = manifest.get("runs")
     if not isinstance(runs, list):
         raise ValueError("--resume manifest runs must be a list")
@@ -173,9 +258,11 @@ def _resume_manifest(output, plan, plan_sha256, expected_ppo_runs, expected_rand
     seen = set()
     for row in runs:
         key = (row.get("candidate_id"), row.get("training_seed"), row.get("observation_mode"))
-        if None in key or key in seen:
+        if None in key or key in seen or key not in expected or row.get("status") not in {"completed", "failed"}:
             raise ValueError("--resume manifest contains missing or duplicate PPO rows")
         seen.add(key)
+        if row["status"] == "completed":
+            _validate_completed_row(row, output, root, expected)
     return manifest
 
 
@@ -195,15 +282,19 @@ def run_phase2a_calibration(plan_path, output, resume=False):
     plan_sha256 = hashlib.sha256(plan_bytes).hexdigest()
     expected_ppo_runs = len(candidates) * len(modes) * len(seeds)
     expected_random_runs = len(candidates) * len(seeds)
+    input_sha256 = _input_fingerprints(root, candidates, plan, modes, seeds)
+    expected = {(candidate_id, seed, mode): (path, grid, plan["policy_config_template"].format(mode=mode, seed=seed))
+                for candidate_id, path, grid in candidates for seed in seeds for mode in modes}
     if resume:
-        manifest = _resume_manifest(output, plan, plan_sha256, expected_ppo_runs, expected_random_runs)
+        manifest = _resume_manifest(output, plan, plan_sha256, expected_ppo_runs, expected_random_runs,
+                                    input_sha256, root, expected)
         manifest["status"] = "started"
         manifest["resume_count"] = int(manifest.get("resume_count", 0)) + 1
         manifest.pop("error", None)
     else:
         output.mkdir(parents=True, exist_ok=False)
         manifest = {"format_version": 1, "status": "started", "purpose": plan["purpose"],
-                    "plan": plan, "plan_sha256": plan_sha256,
+                    "plan": plan, "plan_sha256": plan_sha256, "input_sha256": input_sha256,
                     "provenance": _git_provenance(), "python": platform.python_version(),
                     "candidate_count": len(candidates), "ppo_run_count": expected_ppo_runs,
                     "random_baseline_count": expected_random_runs, "runs": []}
@@ -254,7 +345,8 @@ def run_phase2a_calibration(plan_path, output, resume=False):
                                "stochastic_mean_delivered": metrics["stochastic"]["mean_delivered"],
                                "stochastic_completed_rate": metrics["stochastic"]["completed_rate"],
                                "stochastic_mean_steps": metrics["stochastic"]["mean_steps"],
-                               "actual_agent_transitions": summary["actual_agent_transitions"], "error": ""}
+                               "actual_agent_transitions": summary["actual_agent_transitions"], "error": "",
+                               "artifact_sha256": _artifact_fingerprints(run_output)}
                     except KeyboardInterrupt:
                         raise
                     except BaseException as error:
