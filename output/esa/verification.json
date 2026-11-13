@@ -1,0 +1,33 @@
+{
+  "BJD21.pdf": {
+    "pages": 17,
+    "searchable_text": true,
+    "sha256": "806bd381d7cf598be1781961cc1155d8e0ae7e02d9f541f788e71248a162edd7"
+  },
+  "BJD21_Phase1_Report.pdf": {
+    "pages": 30,
+    "searchable_text": true,
+    "sha256": "cef494984e1104eef15e2bf1b703781e8ed0a61d4b25c6d3f4d0dc8330723007"
+  },
+  "BJD21_Two_Page_Study_Note.pdf": {
+    "pages": 2,
+    "searchable_text": true,
+    "sha256": "f19fb78375eb7ecc3a3e3589919f2d6b930ddfaeed38ec4e0a1e97fd0a7a3fa0"
+  },
+  "BJD21_Phase1_Report.docx": {
+    "a4": true,
+    "margins_cm": 2,
+    "sha256": "e4fe5278a20928b6323710a7116f7f56ad308c7654114b15e2d44493b27b586e"
+  },
+  "BJD21_Two_Page_Study_Note.docx": {
+    "a4": true,
+    "margins_cm": 2,
+    "sha256": "ce910d0c37657477abf36db28363182eda77da491ea748d564033095e696f3ba"
+  },
+  "BJD21.pptx": {
+    "slides": 17,
+    "native_charts": 2,
+    "speaker_note_pages": 17,
+    "sha256": "5385c3a2c77154cb8ecf3122973d638ac7c0d69ca19944ce458a1ea66b4efac9"
+  }
+}
