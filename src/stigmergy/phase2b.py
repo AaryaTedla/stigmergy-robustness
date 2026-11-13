@@ -16,6 +16,11 @@ be made.  It does not create detector labels/features, train a detector, alter
 the frozen PPO policy, add another attack mode, or score a held-out map.  A
 zero or negative injection loss remains a recorded calibration result rather
 than an error condition.
+
+An audit-only environment-source hash may be declared in a plan solely when
+the frozen checkpoint's historical environment hash differs because of tested
+provenance instrumentation. All PPO-relevant source checks remain strict; the
+declared current hash is recorded in the run manifest.
 """
 
 from dataclasses import asdict, dataclass
@@ -24,7 +29,7 @@ import hashlib
 import json
 from pathlib import Path
 import platform
-from statistics import fmean
+from statistics import fmean, median
 
 from .attacks import AttackConfig
 from .environment import GridConfig
@@ -58,6 +63,7 @@ class Phase2BAttackCalibrationPlan:
     action_mode: str = "stochastic"
     group_split: str = "development"
     attack_start_step: int = 0
+    audit_environment_source_sha256: str | None = None
 
     def __post_init__(self):
         if self.format_version != 1 or self.purpose != PLAN_PURPOSE:
@@ -83,6 +89,8 @@ class Phase2BAttackCalibrationPlan:
         if (isinstance(self.attack_start_step, bool) or not isinstance(self.attack_start_step, int) or
                 self.attack_start_step < 0):
             raise ValueError("attack_start_step must be a nonnegative integer")
+        if self.audit_environment_source_sha256 is not None and (not isinstance(self.audit_environment_source_sha256, str) or len(self.audit_environment_source_sha256) != 64):
+            raise ValueError("audit_environment_source_sha256 must be a SHA-256 digest")
 
 
 def _json_sha256(value):
@@ -148,7 +156,7 @@ def load_phase2b_plan(plan_path):
     return plan, root, grid_path, grid, attack_path, attack
 
 
-def _load_frozen_checkpoint(checkpoint, training_seed, grid, map_seeds, source_hashes):
+def _load_frozen_checkpoint(checkpoint, training_seed, grid, map_seeds, source_hashes, audit_environment_source_sha256=None):
     """Verify and load one completed full-input PPO checkpoint without training it."""
     import torch
     from stable_baselines3 import PPO
@@ -173,9 +181,11 @@ def _load_frozen_checkpoint(checkpoint, training_seed, grid, map_seeds, source_h
     # source intentionally is not required to match: Phase 2B varies only the
     # separately logged attack configuration while the frozen policy remains
     # byte-identical. The current attack source is saved in this run's manifest.
-    for name in ("environment.py", "ppo_adapter.py", "training.py"):
+    for name in ("ppo_adapter.py", "training.py"):
         if source_hashes.get(name) != training_manifest.get("source_sha256", {}).get(name):
             raise ValueError(f"checkpoint training source differs for {name}")
+    if source_hashes["environment.py"] != training_manifest["source_sha256"].get("environment.py") and source_hashes["environment.py"] != audit_environment_source_sha256:
+        raise ValueError("checkpoint environment source differs outside the declared audit-only hash")
     torch.set_num_threads(1)
     torch.use_deterministic_algorithms(True)
     model = PPO.load(checkpoint, device="cpu")
@@ -218,6 +228,7 @@ def _summary(rows, contrasts, plan, grid, attack):
             "mean_total_delivered": fmean(row["total_delivered"] for row in seed_rows if row["scenario"] == scenario),
             "mean_honest_delivered": fmean(row["honest_delivered"] for row in seed_rows if row["scenario"] == scenario),
         } for scenario in SCENARIOS}
+    losses = [row["injection_loss_units"] for row in contrasts]
     return {"purpose": PLAN_PURPOSE, "development_only": True,
             "checkpoint_count": len(plan.training_seeds), "group_count": len(contrasts),
             "episode_count": len(rows), "n_agents": grid.n_agents,
@@ -225,6 +236,7 @@ def _summary(rows, contrasts, plan, grid, attack):
             "attack_compromised_fraction": attack.compromised_count / grid.n_agents,
             "per_training_seed": per_seed,
             "mean_injection_loss_units": fmean(row["injection_loss_units"] for row in contrasts),
+            "paired_injection_loss_summary": {"group_count": len(losses), "median_units": float(median(losses)), "harmful_group_fraction": sum(value > 0 for value in losses) / len(losses)},
             "mean_attacked_applied_mass": fmean(row["attacked_applied_mass"] for row in contrasts),
             "limitations": ["development maps only", "persistent attack only", "no detector was fit",
                             "no defense was evaluated", "no held-out evaluation", "not a robustness claim"]}
@@ -247,7 +259,7 @@ def run_phase2b_attack_calibration(plan_path, output):
         relative = plan.checkpoint_template.format(seed=seed)
         checkpoint = _read_repository_file(root, relative, "checkpoint_template")
         model, parameter_hash, training_manifest, file_hash = _load_frozen_checkpoint(
-            checkpoint, seed, grid, plan.map_seeds, source_hashes)
+            checkpoint, seed, grid, plan.map_seeds, source_hashes, plan.audit_environment_source_sha256)
         loaded[seed] = (model, parameter_hash)
         checkpoint_details[str(seed)] = {"path": relative, "file_sha256": file_hash,
                                          "parameter_sha256": parameter_hash,
@@ -263,7 +275,9 @@ def run_phase2b_attack_calibration(plan_path, output):
                 "checkpoints": checkpoint_details, "source_sha256": source_hashes,
                 "provenance": _git_provenance(), "python": platform.python_version(),
                 "model_inputs": ["58 local observation values"],
-                "simulator_only": ["attacker identities", "attack events", "attack mass", "honest delivery accounting"],
+                "simulator_only": ["attacker identities", "attack events", "attack mass",
+                                   "false-food source-attribution views", "honest exposure accounting",
+                                   "honest delivery accounting"],
                 "groups": []}
     _save_json(output / "manifest.json", manifest)
     rows = []

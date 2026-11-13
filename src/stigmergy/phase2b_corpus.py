@@ -44,6 +44,8 @@ FORBIDDEN_MODEL_KEYS = frozenset({
     "attack_events", "attack_summary", "compromised_agents",
     "compromised_count", "compromised_fraction", "requested_mass",
     "authorized_mass", "applied_mass", "honest_delivered", "total_delivered",
+    "attack_food_component_after", "honest_attack_signal_agent_steps",
+    "honest_attack_signal_value_sum",
 })
 
 LOCAL_REQUIRED_KEYS = frozenset({

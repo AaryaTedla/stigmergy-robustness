@@ -108,6 +108,9 @@ def test_environment_hides_attack_identity_and_logs_only_simulator_metadata():
     assert all(env.observation_space(agent).contains(value) for agent, value in observations.items())
     assert all(env.observation_space(agent).contains(value) for agent, value in next_observations.items())
     assert env.attack_summary()["compromised_count"] == 1
+    audit_views = env.audit_attack_food_component_views()
+    assert set(audit_views) == set(env.possible_agents)
+    assert any(np.any(view > 0) for view in audit_views.values())
 
 
 def test_recorder_separates_auditing_metadata_from_local_observations(tmp_path):

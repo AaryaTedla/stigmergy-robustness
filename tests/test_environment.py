@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 from pettingzoo.test import parallel_api_test
 
-from stigmergy import GridConfig, ResourceRetrievalEnv
+from stigmergy import AttackConfig, GridConfig, ResourceRetrievalEnv
 from stigmergy.cli import run_demo
 
 
@@ -90,6 +90,39 @@ def test_deposit_cap_decay_and_channels():
     env.step(stay(env))
     assert env.fields[0, 1, 3] == 1 and env.fields[1, 1, 1] == 0.75
     assert np.isfinite(env.fields).all() and (env.fields >= 0).all()
+
+
+def test_attack_component_audit_tracks_transport_without_mutating_policy_views():
+    """False-food provenance evaporates/clips with the field but remains audit-only."""
+    attack = AttackConfig(compromised_count=1, requested_deposit=2, per_step_budget=2,
+                          episode_budget=4)
+    env = ResourceRetrievalEnv(GridConfig(size=8, n_agents=2, deposit=10, field_cap=10,
+                                           evaporation=0), attack_config=attack)
+    env.reset(seed=7, options={"food_positions": [(1, 3), (6, 6)]})
+    selected_index = env.possible_agents.index(env.attack_injector.compromised_agents[0])
+    # Keep the selected attacker outside the nest so later carrying deposits
+    # test clipping rather than triggering an immediate nest delivery.
+    env.positions[selected_index] = (3, 3)
+    env.step(stay(env))
+    selected = env.attack_injector.compromised_agents[0]
+    selected_position = tuple(env.positions[selected_index])
+    assert env.attack_food_component[selected_position] == pytest.approx(2)
+    fields_before, observation_before = env.fields.copy(), env._observations()
+    views = env.audit_attack_food_component_views()
+    np.testing.assert_array_equal(env.fields, fields_before)
+    assert all(env.observation_space(agent).contains(value)
+               for agent, value in observation_before.items())
+    assert views[selected][1, 1] == pytest.approx(.2)
+
+    # Two ordinary loaded deposits overflow the cell on the next transition.
+    # The audit component follows the documented proportional cap convention.
+    env.positions[:] = selected_position
+    env.carrying[:] = True
+    env.step(stay(env))
+    assert env.fields[0, selected_position[0], selected_position[1]] == pytest.approx(10)
+    assert env.attack_food_component[selected_position] == pytest.approx(2 * 10 / 22)
+    assert np.all(env.attack_food_component >= 0)
+    assert np.all(env.attack_food_component <= env.fields[0])
 
 
 def test_locality_and_observation_copy():

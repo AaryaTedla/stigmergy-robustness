@@ -76,6 +76,30 @@ These are agreed implementation requirements, not proof that code already exists
 
 ## Current verified repository state
 
+- Phase 2B replicated mechanism diagnostic, 2026-11-12: a fresh delayed-200
+  persistent run used the recovered frozen Candidate J checkpoints, 3 policy
+  seeds, 4 development maps and 5 predeclared stochastic action seeds (60
+  groups, 180 matched episodes). Every attacked episode applied 200 units.
+  Mean paired injection loss was +0.17 honest food units; median 0; 14/60
+  groups were harmful. Audit-only provenance showed honest false-food exposure
+  in every attacked episode (mean 2,130.17 exposed agent-steps). This small,
+  mixed development result is not reliable attack degradation and does not
+  authorize a detector, defense, or robustness claim. Full suite: 164 passed
+  in 32.86 seconds.
+
+- Phase 2B mechanism-diagnostics instrumentation, 2026-11-12: decision 0018
+  adds a simulator-only `attack_food_component` provenance array that tracks
+  applied false-food mass through the same proportional cap and evaporation
+  stages as the food field. Matched PPO rollout records now place normalized
+  3-by-3 false-component views only in `simulator_metadata`, together with
+  honest exposed-step/value aggregates; the Phase 2B corpus rejects those
+  fields if they appear in local records. Focused environment/attack/Phase 2B/
+  corpus checks passed 76 tests and the pinned full suite passed 164 in 32.76
+  seconds. The tiny frozen-PPO integration exercised the boundary. No Candidate
+  J calibration was rerun; this changes neither field physics nor PPO inputs,
+  attack capability, policy, split, detector, defense, or the recorded
+  negative-result interpretation.
+
 - Review 2 live presentation follow-through, 2026-11-05: browser access was
   restored and the same 22-slide Canva design was updated with implemented
   Phase 2B calibration/corpus/CSV, recorded negative losses and pending

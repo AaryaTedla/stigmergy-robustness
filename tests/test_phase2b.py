@@ -98,6 +98,7 @@ def test_phase2b_runner_preserves_matched_controls_and_whole_groups(phase2b_plan
     manifest = json.loads((output / "manifest.json").read_text())
     splits = json.loads((output / "group_splits.json").read_text())
     assert manifest["status"] == "completed" and len(manifest["groups"]) == len(splits["assignments"]) == 1
+    assert "false-food source-attribution views" in manifest["simulator_only"]
     group = manifest["groups"][0]
     assert group["split"] == "development" and group["scenarios"] == ["clean", "injection_disabled", "attacked"]
     group_dir = output / "episodes" / group["group_id"]
@@ -111,6 +112,9 @@ def test_phase2b_runner_preserves_matched_controls_and_whole_groups(phase2b_plan
     first_record = json.loads((group_dir / "attacked" / "steps.jsonl").read_text().splitlines()[0])
     assert "compromised_agents" not in first_record["local"]
     assert "attack_events" in first_record["simulator_metadata"]
+    assert "attack_food_component_after" not in first_record["local"]
+    assert "attack_food_component_after" in first_record["simulator_metadata"]
+    assert attacked["metrics"]["honest_attack_signal_agent_steps"] >= 0
 
 
 def test_phase2b_rejects_a_changed_attack_contract_before_writing_output(phase2b_plan, tmp_path):
