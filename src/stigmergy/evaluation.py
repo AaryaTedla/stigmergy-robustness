@@ -18,6 +18,9 @@ summary.json, runtime.json, PNG/SVG plots and per-group/per-scenario steps.jsonl
 Local features (12 float32 values) and proposed/executed actions live in the
 local record; attacker identity/mass and global honest delivery accounting are
 simulator_metadata only. Episode metrics use food units and world-step counts.
+Phase 2B mechanism diagnostics add only an audit-side false-food component
+view and aggregate honest exposure counts; these values never enter the PPO
+row, local digest, policy, controller, or exported model-observable corpus.
 Injection loss = honest disabled - honest attacked; timeout gain = honest
 attacked+timeout - honest attacked. Clean cost = total clean - total clean+
 timeout. Recovery gain/loss is undefined for loss <= 0. Timeout activity is not
@@ -156,6 +159,8 @@ def rollout_comparison_episode(model, grid, attack_config, config, map_seed, act
     group_id = group_id or f"map-{map_seed}_action-{action_seed}_{action_mode}"
     count_deliveries = {a: 0 for a in observations}
     overrides = activations = 0
+    honest_attack_signal_agent_steps = 0
+    honest_attack_signal_value_sum = 0.0
     local_digest = hashlib.sha256()
     start = time.perf_counter()
     try:
@@ -164,6 +169,14 @@ def rollout_comparison_episode(model, grid, attack_config, config, map_seed, act
             while world.agents:
                 actions, diagnostics = controller.act(observations)
                 after, rewards, terms, truncs, infos = world.step(actions)
+                # This source-attribution view is simulator-only.  It is read
+                # after transition so it describes the signal available in the
+                # next observation, but deliberately stays outside ``local``.
+                attack_component_views = world.audit_attack_food_component_views()
+                for agent, view in attack_component_views.items():
+                    if agent not in selected:
+                        honest_attack_signal_agent_steps += int(np.any(view > 0))
+                        honest_attack_signal_value_sum += float(view.sum())
                 for agent in count_deliveries:
                     count_deliveries[agent] += int(after[agent][56])
                     overrides += int(actions[agent] != diagnostics["proposed_actions"][agent])
@@ -175,6 +188,7 @@ def rollout_comparison_episode(model, grid, attack_config, config, map_seed, act
                                                separators=(",", ":")).encode("utf-8"))
                 record = {"step": world.steps, "local": local,
                           "simulator_metadata": {"attack_events": [e.as_dict() for e in world.last_attack_events],
+                              "attack_food_component_after": attack_component_views,
                               "total_delivered": world.delivered_total,
                               "honest_delivered": sum(v for a, v in count_deliveries.items() if a not in selected)}}
                 stream.write(json.dumps(_json_value(record), sort_keys=True, separators=(",", ":")) + "\n")
@@ -188,6 +202,8 @@ def rollout_comparison_episode(model, grid, attack_config, config, map_seed, act
                "steps": world.steps, "completed": not world.food.any() and not world.carrying.any(),
                "local_record_sha256": local_digest.hexdigest(),
                "timeout_active_agent_steps": activations, "overridden_agent_actions": overrides,
+               "honest_attack_signal_agent_steps": honest_attack_signal_agent_steps,
+               "honest_attack_signal_value_sum": honest_attack_signal_value_sum,
                "requested_mass": attack["total_requested_mass"] if attack else 0.0,
                "authorized_mass": attack["total_authorized_mass"] if attack else 0.0,
                "applied_mass": attack["total_applied_mass"] if attack else 0.0}

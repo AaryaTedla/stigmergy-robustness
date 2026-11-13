@@ -108,6 +108,19 @@ def test_corpus_builder_rejects_simulator_metadata_in_a_local_source_record(tmp_
         build_phase2b_calibration_corpus(plan, root / "data" / "generated" / "must-not-exist")
 
 
+def test_corpus_builder_rejects_audit_only_attack_component_in_a_local_record(tmp_path):
+    """The new source-attribution array cannot silently become a detector feature."""
+    root = tmp_path / "project"
+    run = _make_source(root)
+    steps = run / "episodes" / "policy-7_map-100_action-7_stochastic" / "attacked" / "steps.jsonl"
+    record = json.loads(steps.read_text())
+    record["local"]["attack_food_component_after"] = {"agent_0": [[0.0] * 3] * 3}
+    steps.write_text(json.dumps(record) + "\n", encoding="utf-8")
+    plan = _write_plan(root)
+    with pytest.raises(ValueError, match="leaks simulator-only keys"):
+        build_phase2b_calibration_corpus(plan, root / "data" / "generated" / "must-not-exist")
+
+
 @pytest.mark.parametrize("change", ["duplicate", "map", "missing_assignment", "unsafe_id"])
 def test_corpus_rejects_conflicting_or_duplicate_group_provenance(tmp_path, change):
     """Completion status cannot hide repeated groups or disagreement with split provenance."""

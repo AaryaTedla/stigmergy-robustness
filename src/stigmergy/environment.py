@@ -44,6 +44,14 @@ occur at actual post-movement positions, are nonnegative, and share the cap
 and evaporation rule. The optional first-review persistent attack uses the
 same food-field cap and transport stage; see decision 0002 for its narrow
 threat model. Diffusion and learned defenses remain future milestones.
+
+For Phase 2B mechanism diagnostics only, ``attack_food_component`` tracks the
+portion of the food field attributable to applied false-food deposits. It is a
+simulator-only audit array, never an observation, info value, reward input, or
+policy/controller feature. At a food-field cap the component is scaled by the
+same proportional convention as the total field, then it evaporates with the
+field. This gives a bounded, reproducible provenance estimate without changing
+the physics seen by any agent.
 """
 
 from dataclasses import dataclass
@@ -155,6 +163,9 @@ class ResourceRetrievalEnv(ParallelEnv):
         for p in patches:
             self.food[p] = c.food_per_patch
         self.fields = np.zeros((2, c.size, c.size), dtype=np.float64)
+        # This source-attribution array is deliberately separate from
+        # ``fields``. Its updates must never feed back into physics or PPO input.
+        self.attack_food_component = np.zeros((c.size, c.size), dtype=np.float64)
         self.events = np.zeros((c.n_agents, 3), dtype=np.float32)
         self.steps = self.delivered_total = 0
         self.last_attack_events = ()
@@ -246,8 +257,11 @@ class ResourceRetrievalEnv(ParallelEnv):
         if self.attack_injector is not None:
             self.last_attack_events = self.attack_injector.inject(
                 self.fields, self.positions, self.config.field_cap)
-        np.clip(self.fields, 0, self.config.field_cap, out=self.fields)
-        self.fields *= 1 - self.config.evaporation
+            # The injector already reports actual (not merely requested) mass,
+            # so provenance remains correct when a cell lacks field headroom.
+            for event in self.last_attack_events:
+                self.attack_food_component[event.position] += event.applied_mass
+        self._cap_and_evaporate_fields()
         self.steps += 1
         self.delivered_total += deliveries
         complete = self.food.sum() == 0 and not self.carrying.any()
@@ -275,6 +289,53 @@ class ResourceRetrievalEnv(ParallelEnv):
                     cell[4] = np.all(self.positions == (r, col), axis=1).sum() / self.config.n_agents
             result[a] = np.concatenate((patch.ravel(), [self.carrying[i]], self.events[i])).astype(np.float32)
         return result
+
+    def _cap_and_evaporate_fields(self):
+        """Apply ordinary field transport while carrying audit-only source mass.
+
+        Normal deposits can make a food cell exceed ``field_cap`` before the
+        shared clip stage.  The simulator does not retain exact source ordering
+        after that point, so source attribution uses an explicit proportional
+        convention: every extant false-food contribution at an overfull cell is
+        multiplied by ``field_cap / pre_clip_total``.  The component then gets
+        the identical evaporation factor as food pheromone.  It is clamped to
+        the resulting food field to protect the invariant
+        ``0 <= attack_food_component <= fields[0]`` even under floating-point
+        roundoff.  None of these bookkeeping operations modifies field values.
+        """
+        food_before_clip = self.fields[0].copy()
+        np.clip(self.fields, 0, self.config.field_cap, out=self.fields)
+        overfull = food_before_clip > self.config.field_cap
+        if np.any(overfull):
+            self.attack_food_component[overfull] *= (
+                self.config.field_cap / food_before_clip[overfull])
+        evaporation_factor = 1 - self.config.evaporation
+        self.fields *= evaporation_factor
+        self.attack_food_component *= evaporation_factor
+        np.clip(self.attack_food_component, 0, self.fields[0], out=self.attack_food_component)
+
+    def audit_attack_food_component_views(self):
+        """Return copied, normalized 3-by-3 false-food views for audit writers.
+
+        Each key is an agent ID and each value has the same row/column crop and
+        out-of-bounds-zero convention as the food-pheromone part of a policy
+        observation, but contains only simulator provenance. Values are raw
+        false-food component divided by ``field_cap`` and therefore lie in
+        ``[0, 1]``. The method is safe after a terminal transition because it
+        uses stable ``possible_agents``/positions rather than the emptied live
+        agent list. Callers must write its result only under audit metadata.
+        """
+        views = {}
+        for index, agent in enumerate(self.possible_agents):
+            view = np.zeros((3, 3), dtype=np.float32)
+            for dr in range(-1, 2):
+                for dc in range(-1, 2):
+                    row, column = self.positions[index] + (dr, dc)
+                    if 0 <= row < self.config.size and 0 <= column < self.config.size:
+                        view[dr + 1, dc + 1] = (
+                            self.attack_food_component[row, column] / self.config.field_cap)
+            views[agent] = view
+        return views
 
     def _infos(self):
         # Attack metadata deliberately stays out of infos: policy, defense,

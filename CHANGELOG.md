@@ -4,6 +4,30 @@ This file records verified project changes. Planned work belongs in `docs/CONTEX
 
 ## Unreleased
 
+### Replicated Phase 2B mechanism diagnostic - 2026-11-12
+
+- Ran fresh delayed-200 bounded persistent calibration with 3 frozen Candidate
+  J policies, 4 development maps and 5 predeclared action seeds: 60 groups and
+  180 matched episodes. Mean paired injection loss was +0.17 honest food units
+  (median 0; 14/60 harmful groups), so the effect remains small and mixed.
+- Audit-only source attribution found honest exposure in all attacked episodes
+  (mean 2,130.17 exposed agent-steps). No detector, defense, held-out split or
+  robustness claim was added. Full suite: 164 passed in 32.86 seconds.
+
+### Phase 2B false-food mechanism diagnostics - 2026-11-12
+
+- Added decision 0018 and audit-only false-food source attribution. Applied
+  attack mass now has a separate component array that follows the existing
+  food-field clipping/evaporation convention without changing simulator fields
+  or the 58-value PPO observation.
+- Matched PPO rollout audit records now contain normalized local
+  source-attribution views and honest exposure aggregates. The corpus rejects
+  these fields if they appear in model-observable local records. No Candidate J
+  experiment was rerun and no attack, detector, defense, split, or robustness
+  claim was added.
+- Focused environment/attack/Phase 2B/corpus checks passed 76 tests; the full
+  pinned suite passed 164 tests in 32.76 seconds.
+
 ### Review 2 live Canva presentation follow-through - 2026-11-05
 
 - Applied the prepared Phase 2B updates to the same 22-slide Canva design:

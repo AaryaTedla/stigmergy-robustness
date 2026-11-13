@@ -1,0 +1,15 @@
+{
+  "format_version": 1,
+  "purpose": "development_only_phase2b_attack_calibration",
+  "candidate_id": "candidate_j_12x12_scout_follow_capacity",
+  "grid_config_path": "configs/phase2a/env/candidate_j_12x12_scout_follow_capacity.json",
+  "checkpoint_template": "artifacts/phase2a/scout-follow-capacity-run-001/candidate_j_12x12_scout_follow_capacity/full-seed-{seed}-resume-1/policy.zip",
+  "attack_config_path": "configs/attack/persistent-phase2b-delayed-200.json",
+  "training_seeds": [7, 17, 27],
+  "map_seeds": [100, 101, 102, 103],
+  "action_seeds": [7, 17, 27, 37, 47],
+  "action_mode": "stochastic",
+  "group_split": "development",
+  "attack_start_step": 200,
+  "audit_environment_source_sha256": "062be6253e336b04892ae7b540d770719fd9694ab4d83be52e2f4ee3dfd7fdb9"
+}
